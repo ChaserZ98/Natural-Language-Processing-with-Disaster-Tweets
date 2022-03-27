@@ -1,4 +1,6 @@
-[TOC]
+- [Natural Language Processing with Disaster Tweets](#natural-language-processing-with-disaster-tweets)
+  - [Predict which Tweets are about real disasters and which ones are not](#predict-which-tweets-are-about-real-disasters-and-which-ones-are-not)
+    - [Competition Description](#competition-description)
 
 # Natural Language Processing with Disaster Tweets
 ## Predict which Tweets are about real disasters and which ones are not
