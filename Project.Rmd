@@ -32,6 +32,10 @@ options(dplyr.summarise.inform = F)
 
 ```{r warning=FALSE}
 kaggle <- fromJSON("kaggle.json")
+
+if(!dir.exists("./Data")){
+  dir.create("./Data")
+}
 if(!file.exists("./Data/train.csv")){
   data <- httr::GET("https://www.kaggle.com/api/v1/competitions/data/download/17777/train.csv", httr::authenticate(kaggle$username, kaggle$key, type = "basic"))
   download.file(data$url, "./Data/train.csv")
