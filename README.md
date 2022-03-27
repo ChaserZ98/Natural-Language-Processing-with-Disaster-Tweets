@@ -1,11 +1,20 @@
-- [Natural Language Processing with Disaster Tweets](#natural-language-processing-with-disaster-tweets)
-  - [Predict which Tweets are about real disasters and which ones are not](#predict-which-tweets-are-about-real-disasters-and-which-ones-are-not)
-    - [Competition Description](#competition-description)
-
 # Natural Language Processing with Disaster Tweets
-## Predict which Tweets are about real disasters and which ones are not
 
-### Competition Description
+### Predict which Tweets are about real disasters and which ones are not
+
+Language: ![R](https://img.shields.io/badge/r-%23276DC3.svg?style=for-the-badge&logo=r&logoColor=white)
+
+Data Source: ![Kaggle](https://img.shields.io/badge/Kaggle-20BEFF?style=for-the-badge&logo=Kaggle&logoColor=white)
+
+R Packages: ![tidyverse version](https://img.shields.io/badge/tidyverse-1.3.1-brightgreen)
+![dplyr version](https://img.shields.io/badge/dplyr-1.0.7-brightgreen)
+![ggplot2 version](https://img.shields.io/badge/ggplot2-3.3.5-brightgreen)
+
+
+- [Competition Description](#competition-description)
+
+
+## Competition Description
 Twitter has become an important communication channel in times of emergency.
 The ubiquitousness of smartphones enables people to announce an emergency they’re observing in real-time. Because of this, more agencies are interested in programatically monitoring Twitter (i.e. disaster relief organizations and news agencies).
 
