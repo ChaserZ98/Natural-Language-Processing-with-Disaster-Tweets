@@ -1,0 +1,53 @@
+---
+title: "Final Project"
+author: "Feiyu Zheng (fz114) & Junyi Li()"
+date: "2022/3/27"
+output:
+  pdf_document: default
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(tidytext)
+library(textdata)
+library(rvest)
+library(httr)
+library(curl)
+library(jsonlite)
+
+# suppress the warning message of dplyr
+options(dplyr.summarise.inform = F)
+```
+
+# Dataset
+
+## Download source data from kaggle
+
+```{r warning=FALSE}
+kaggle <- fromJSON("kaggle.json")
+if(!file.exists("./Data/train.csv")){
+  data <- httr::GET("https://www.kaggle.com/api/v1/competitions/data/download/17777/train.csv", httr::authenticate(kaggle$username, kaggle$key, type = "basic"))
+  download.file(data$url, "./Data/train.csv")
+  data <- httr::GET("https://www.kaggle.com/api/v1/competitions/data/download/17777/test.csv", httr::authenticate(kaggle$username, kaggle$key, type = "basic"))
+  download.file(data$url, "./Data/test.csv")
+}
+```
+
+## Read downloaded csv files and convert them to tibble
+
+```{r}
+trainset <- read.csv("./Data/train.csv") %>%
+  as_tibble()
+trainset
+
+testset <- read.csv("./Data/test.csv") %>%
+  as_tibble()
+testset
+```
