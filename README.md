@@ -3,7 +3,7 @@
 [![commits](https://badgen.net/github/commits/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/main)](https://GitHub.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/graphs/commit-activity)
 [![forks](https://badgen.net/github/forks/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets)](https://GitHub.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/network/members)
 [![stars](https://badgen.net/github/stars/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets)](https://GitHub.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/stargazers)
-[![issues](https://img.shields.io/github/issues/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets)](https://GitHub.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/issues/)
+[![issues](https://badgen.net/github/issues/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets)](https://GitHub.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/issues/)
 [![MIT license](https://img.shields.io/badge/License-MIT-blue.svg)](https://lbesson.mit-license.org/)
 
 <div align="center">
