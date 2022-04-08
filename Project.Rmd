@@ -47,11 +47,126 @@ if(!file.exists("./Data/train.csv")){
 ## Read downloaded csv files and convert them to tibble
 
 ```{r}
-trainset <- read.csv("./Data/train.csv") %>%
+encoding <- "UTF-8"
+trainset <- read.csv(
+  "./Data/train.csv",
+  encoding = encoding,
+  header = T
+) %>%
   as_tibble()
-trainset
 
-testset <- read.csv("./Data/test.csv") %>%
+# extract 20% data from trainset as validset
+valset <- sample_frac(trainset, 0.2)
+
+# exclude those validset data from trainset
+trainset <- trainset %>%
+  anti_join(valset, by = "id")
+
+testset <- read.csv(
+  "./Data/test.csv",
+  encoding = encoding,
+  header = T
+) %>%
   as_tibble()
+
+
+trainset
 testset
+valset
+```
+
+## Data Preprocess
+
+### Replace the whitespace unicode %20 in *keywords* variable
+
+```{r}
+replaceWhiteSpaceUnicode <- function(dataset){
+  dataset %>% mutate(keyword = str_replace_all(keyword, "%20", " "))
+}
+tidy_trainset <- replaceWhiteSpaceUnicode(trainset)
+tidy_trainset
+
+tidy_trainset %>%
+  group_by(keyword) %>%
+  count() %>%
+  arrange(desc(n)) %>%
+  ungroup()
+```
+
+### Compute the length of each *text* variable
+
+```{r}
+extractTextLength <- function(dataset){
+  dataset %>% mutate(textLength = nchar(.$text))
+}
+tidy_trainset <- extractTextLength(tidy_trainset)
+tidy_trainset
+```
+
+### Extract Tags and '\@'s in *text* variable
+
+```{r}
+extractTags <- function(dataset){
+  dataset %>%
+    mutate(
+      tags = map_chr(
+        map(
+          .x = str_extract_all(tolower(.$text), "#\\S+"),
+          unlist
+        ),
+        ~paste(.x, collapse = ',')
+      ),
+      at = map_chr(
+        map(
+          .x = str_extract_all(tolower(.$text), "@\\S+"),
+          unlist
+        ),
+        ~paste(.x, collapse = ',')
+      )
+    )
+}
+tidy_trainset <- extractTags(trainset)
+tidy_trainset
+```
+
+### Parse *location* variable (todo)
+
+```{r}
+withLocation <- tidy_trainset %>%
+  mutate(location = str_replace_all(location, regex("[^, [:alpha:]]+"), "")) %>%
+  mutate(location = str_replace_all(location, regex("( )*,( )*"), ", ")) %>%
+  filter(location != '') %>%
+  separate(location, c('location 1', 'location 2'), ', ') %>%
+  filter(!(`location 1` %in% c('', NA)) | !(`location 2`%in% c('', NA)))
+withLocation
+
+withoutLocation <- tidy_trainset %>% anti_join(withLocation, by='id')
+withoutLocation
+USAstate <- cbind(state.abb, state.name) %>%
+  as.tibble() %>%
+  rename(abb = state.abb, name = state.name)
+USAstate
+```
+
+```{r}
+library(ISOcodes)
+country_t <- ISO_3166_1 %>%
+  as.tibble()
+country_t
+```
+
+## Lexicon
+
+```{r}
+lexicon_nrc() %>%
+  filter(word == 'earthquake')
+lexicon_nrc_eil() %>%
+  filter(term == 'fire')
+```
+
+## Twitter API
+
+```{r}
+twitter <- fromJSON("twitter.json")
+twitterAPIHeader <- c('Authorization' = sprintf(""))
 ```
