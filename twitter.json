@@ -1,0 +1,6 @@
+//Please replace this following data with your own twitter key, value, bearer token
+{
+	"key": "******",
+	"value": "******",
+	"bearer_token": "******"
+}
