@@ -43,3 +43,5 @@ vignettes/*.pdf
 
 # Project Ignored Files
 Data/
+kaggle.json
+twitter.json
