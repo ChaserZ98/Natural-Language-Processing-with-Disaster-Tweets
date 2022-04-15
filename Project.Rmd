@@ -56,13 +56,6 @@ trainset <- read.csv(
 ) %>%
   as_tibble()
 
-# extract 20% data from trainset as validset
-valset <- sample_frac(trainset, 0.2)
-
-# exclude those validset data from trainset
-trainset <- trainset %>%
-  anti_join(valset, by = "id")
-
 testset <- read.csv(
   "./Data/test.csv",
   encoding = encoding,
@@ -73,22 +66,86 @@ testset <- read.csv(
 
 trainset
 testset
-valset
-
-trainset %>%
-  summarise(count = sum(target)/n())
 ```
+
+## 
 
 ## Data Preprocess
 
-### Replace the whitespace unicode %20 in *keywords* variable
+### Simple analysis on the dataset
 
 ```{r}
-replaceWhiteSpaceUnicode <- function(dataset){
-  dataset %>% mutate(keyword = str_replace_all(keyword, "%20", " "))
+trainsetRatio <- trainset %>%
+  mutate(total = n()) %>%
+  group_by(target, total) %>%
+  summarise(count = n()) %>%
+  mutate(ratio = round(count / total, 2)) %>%
+  select(target, count, total, ratio) %>%
+  ungroup()
+trainsetRatio
+```
+
+### Dataset split according to target ratio
+
+```{r}
+total <- nrow(trainset)
+zeroRatio <- trainsetRatio %>%
+  filter(target == 0) %>%
+  pull(ratio)
+oneRatio <- trainsetRatio %>%
+  filter(target == 1) %>%
+  pull(ratio)
+
+# set random seed for sample
+set.seed(25)
+
+# extract 20% data from trainset as validset
+valRatio <- 0.2
+zero <- trainset %>%
+  filter(target == 0) %>%
+  sample_n(zeroRatio * total * valRatio)
+one <- trainset %>%
+  filter(target == 1) %>%
+  sample_n(oneRatio * total * valRatio)
+valset <- bind_rows(
+  sample_n(
+    filter(trainset, target == 0),
+    zeroRatio * total * valRatio
+  ),
+  sample_n(
+    filter(trainset, target == 1),
+    oneRatio * total * valRatio
+  )
+) %>%
+  arrange(id)
+
+# exclude those validset data from trainset
+trainset <- trainset %>%
+  anti_join(valset, by = "id") %>%
+  arrange(id)
+
+trainset
+valset
+```
+
+### Replace the whitespace unicode %20 in *keywords* variable and newline character \n in text 
+
+```{r}
+replace_space_unicode <- function(dataset){
+  dataset %>% mutate(
+    keyword = str_replace_all(keyword, "%20", " "),
+    text = str_replace_all(text, "\n", " ")
+  )
 }
-tidy_trainset <- replaceWhiteSpaceUnicode(trainset)
-tidy_trainset
+replace_new_line <- function(dataset){
+  dataset %>% mutate(
+    text = str_replace_all(text, "\n", " ")
+  )
+}
+tidy_trainset <- trainset %>%
+  replace_space_newline() %>%
+  replace_new_line()
+tidy_trainset %>% filter(id == 2899)
 
 tidy_trainset %>%
   group_by(keyword) %>%
@@ -97,30 +154,94 @@ tidy_trainset %>%
   ungroup()
 ```
 
+### Extract Tags, '\@'s and links in *text* variable
+
+```{r}
+extract_at <- function(dataset){
+  dataset %>%
+    mutate(
+      at = map_chr(
+        map(
+          .x = str_extract_all(tolower(.$text), "@\\S+"),
+          unlist
+        ),
+        ~case_when(
+          paste(.x, collapse = ',') == '' ~ NA_character_,
+          T ~ paste(.x, collapse = ',')
+        )
+      ),
+      text = str_replace_all(text, "@\\S+", '')
+    )
+}
+extract_links <- function(dataset){
+  dataset %>%
+    mutate(
+      links = map_chr(
+        map(
+          .x = str_extract_all(text, '\\S+\\.\\S+/\\S\\s*'),
+          unlist
+        ),
+        ~case_when(
+          paste(.x, collapse = ',') == '' ~ NA_character_,
+          T ~ paste(.x, collapse = ',')
+        )
+      ),
+      text = str_replace_all(text, "\\S+//\\S+\\.?\\S+\\S\\s*", '')
+    )
+}
+extract_tags <- function(dataset){
+  dataset %>%
+    mutate(
+      tags = map_chr(
+        map(
+          .x = str_extract_all(tolower(.$text), "#\\S+"),
+          unlist
+        ),
+        ~case_when(
+          paste(.x, collapse = ',') == '' ~ NA_character_,
+          T ~ paste(.x, collapse = ',')
+        )
+      )
+    )
+}
+tidy_trainset <- tidy_trainset %>%
+  extract_tags() %>%
+  extract_at() %>%
+  extract_links()
+tidy_trainset
+```
+
 ### Compute the length of each *text* variable
 
 ```{r}
-extractTextLength <- function(dataset){
-  dataset %>% mutate(textLength = nchar(.$text))
+extract_char_length <- function(dataset){
+  dataset %>% mutate(charLength = nchar(.$text))
+}
+extract_word_count <- function(dataset){
+  dataset %>% mutate(wordCount = str_count(text, "\\w+"))
 }
 
-tidy_trainset <- extractTextLength(tidy_trainset)
+classify_char_length <- function(dataset){
+  dataset %>% mutate(
+    charLengthType = case_when(
+      charLength <= 50 ~ "short",
+      charLength <= 100 ~ "medium",
+      charLength <= 150 ~ "long",
+      T ~ "other"
+    )
+  )
+}
+
 tidy_trainset <- tidy_trainset %>%
-  mutate(lengthType = case_when(
-    textLength <= 50 ~ "short",
-    textLength <= 100 ~ "medium",
-    textLength <= 150 ~ "long",
-    T ~ "other"
-  ))
+  extract_char_length() %>%
+  extract_word_count()
+tidy_trainset <- tidy_trainset %>%
+  classify_char_length()
+tidy_trainset %>%
+  ggplot() +
+  geom_bar(aes(x = charLengthType, color = as.factor(target)))
+
 tidy_trainset
-# tidy_trainset %>%
-#   ggplot() +
-#   geom_bar(aes(x = lengthType, color = as.factor(target)))
-
-
-# tidy_trainset %>% mutate(keyword = str_replace_all(keyword, "%20", ' ')) %>%
-#   group_by(keyword, target) %>%
-#   summarise(count = n())
 ```
 
 ### Ratio of each keyword vs target
@@ -131,32 +252,6 @@ keywordRatio <- tidy_trainset %>%
   summarise(disasterRatio = sum(target) / n()) %>%
   arrange(desc(disasterRatio))
 keywordRatio
-```
-
-### Extract Tags and '\@'s in *text* variable
-
-```{r}
-extractTags <- function(dataset){
-  dataset %>%
-    mutate(
-      tags = map_chr(
-        map(
-          .x = str_extract_all(tolower(.$text), "#\\S+"),
-          unlist
-        ),
-        ~paste(.x, collapse = ',')
-      ),
-      at = map_chr(
-        map(
-          .x = str_extract_all(tolower(.$text), "@\\S+"),
-          unlist
-        ),
-        ~paste(.x, collapse = ',')
-      )
-    )
-}
-tidy_trainset <- extractTags(trainset)
-tidy_trainset
 ```
 
 ### Parse *location* variable (todo)
