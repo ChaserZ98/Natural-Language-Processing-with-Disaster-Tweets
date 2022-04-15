@@ -128,7 +128,7 @@ trainset
 valset
 ```
 
-### Replace the whitespace unicode %20 in *keywords* variable and newline character \n in text 
+### Replace the whitespace unicode %20 in *keywords* variable and newline character \n in text
 
 ```{r}
 replace_space_unicode <- function(dataset){
@@ -143,7 +143,7 @@ replace_new_line <- function(dataset){
   )
 }
 tidy_trainset <- trainset %>%
-  replace_space_newline() %>%
+  replace_space_unicode() %>%
   replace_new_line()
 tidy_trainset %>% filter(id == 2899)
 
@@ -238,8 +238,20 @@ tidy_trainset <- tidy_trainset %>%
 tidy_trainset <- tidy_trainset %>%
   classify_char_length()
 tidy_trainset %>%
+  mutate(target = as.factor(target)) %>%
   ggplot() +
-  geom_bar(aes(x = charLengthType, color = as.factor(target)))
+  geom_bar(aes(x = charLengthType, fill = target)) +
+  labs(
+    x = "Length Type",
+    y = "Count",
+    title = "Distribution of Length Types"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+tidy_trainset %>%
+  mutate(target = as.factor(target)) %>%
+  ggplot() +
+  geom_histogram(aes(x = wordCount, fill = as.factor(target)))
 
 tidy_trainset
 ```
@@ -252,6 +264,18 @@ keywordRatio <- tidy_trainset %>%
   summarise(disasterRatio = sum(target) / n()) %>%
   arrange(desc(disasterRatio))
 keywordRatio
+```
+
+```{r}
+tidy_trainset %>%
+  filter(!is.na(tags)) %>%
+  separate_rows(tags, sep = ',') %>%
+  group_by(tags, target) %>%
+  summarise(n = n()) %>%
+  # group_by(tags) %>%
+  mutate(ratio = n / sum(n)) %>%
+  filter(n >= 10) %>%
+  arrange(desc(n), desc(ratio), tags)
 ```
 
 ### Parse *location* variable (todo)
