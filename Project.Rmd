@@ -21,6 +21,7 @@ library(rvest)
 library(httr)
 library(curl)
 library(jsonlite)
+library(randomForest)
 
 # suppress the warning message of dplyr
 options(dplyr.summarise.inform = F)
@@ -73,6 +74,9 @@ testset <- read.csv(
 trainset
 testset
 valset
+
+trainset %>%
+  summarise(count = sum(target)/n())
 ```
 
 ## Data Preprocess
@@ -99,8 +103,34 @@ tidy_trainset %>%
 extractTextLength <- function(dataset){
   dataset %>% mutate(textLength = nchar(.$text))
 }
+
 tidy_trainset <- extractTextLength(tidy_trainset)
+tidy_trainset <- tidy_trainset %>%
+  mutate(lengthType = case_when(
+    textLength <= 50 ~ "short",
+    textLength <= 100 ~ "medium",
+    textLength <= 150 ~ "long",
+    T ~ "other"
+  ))
 tidy_trainset
+# tidy_trainset %>%
+#   ggplot() +
+#   geom_bar(aes(x = lengthType, color = as.factor(target)))
+
+
+# tidy_trainset %>% mutate(keyword = str_replace_all(keyword, "%20", ' ')) %>%
+#   group_by(keyword, target) %>%
+#   summarise(count = n())
+```
+
+### Ratio of each keyword vs target
+
+```{r}
+keywordRatio <- tidy_trainset %>%
+  group_by(keyword) %>%
+  summarise(disasterRatio = sum(target) / n()) %>%
+  arrange(desc(disasterRatio))
+keywordRatio
 ```
 
 ### Extract Tags and '\@'s in *text* variable
@@ -162,6 +192,26 @@ lexicon_nrc() %>%
   filter(word == 'earthquake')
 lexicon_nrc_eil() %>%
   filter(term == 'fire')
+```
+
+## Random Forest Training
+
+```{r}
+# tidy_trainset
+input <- tidy_trainset %>%
+  mutate(
+    target = as.factor(target),
+    hasTag = case_when(
+      tags == '' ~ 0,
+      T ~ 1
+    ),
+    hasAt = case_when(
+      at == '' ~ 0,
+      T ~ 1
+    )
+  ) %>%
+  select(target, hasTag, hasAt)
+randomForest(target ~., data = input, importance = T)
 ```
 
 ## Twitter API
