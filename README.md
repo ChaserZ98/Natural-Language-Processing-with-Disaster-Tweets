@@ -31,6 +31,7 @@
         <li><a href="#built-with">Built With</a></li>
       </ul>
     </li>
+    <li><a href="#data-source">Data Source</a></li>
     <li><a href="#competition-description">Competition Description</a></li>
     <li><a href="#contact">Contact</a></li>
   </ol>
@@ -50,6 +51,10 @@ This is a course project of Rutgers MSDS597 Data Wrangling and Husbandry.
 ![dplyr version](https://img.shields.io/badge/dplyr-1.0.7-brightgreen)
 ![ggplot2 version](https://img.shields.io/badge/ggplot2-3.3.5-brightgreen)
 
+
+## Data Source
+
+[Natural Language Processing with Disaster Tweets](https://www.kaggle.com/competitions/nlp-getting-started)
 
 ## Competition Description
 Twitter has become an important communication channel in times of emergency.
