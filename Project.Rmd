@@ -22,6 +22,7 @@ library(httr)
 library(curl)
 library(jsonlite)
 library(randomForest)
+library(caret)
 
 # suppress the warning message of dplyr
 options(dplyr.summarise.inform = F)
@@ -57,22 +58,39 @@ trainset <- read.csv(
   as_tibble()
 
 testset <- read.csv(
-  "./Data/test.csv",
+  "./Data/test_result.csv",
   encoding = encoding,
   header = T
 ) %>%
   as_tibble()
 
+# result_set <- read.csv(
+#   "./Data/socialmedia-disaster-tweets-DFE.csv",
+#   encoding = encoding,
+#   header = T
+# ) %>%
+#   as_tibble()
 
 trainset
 testset
+# result_set %>%
+#   mutate(id = row_number() - 1) %>%
+#   select(id, text, choose_one) %>%
+#   inner_join(testset, by = 'id') %>%
+#   select(id, keyword, location, text.y, choose_one) %>%
+#   rename(text = text.y, target = choose_one) %>%
+#   mutate(target = case_when(
+#     target == "Relevant" ~ as.integer(1),
+#     T ~ as.integer(0)
+#   )) %>%
+#   write.csv(file = "./Data/test_result.csv", row.names = F)
 ```
 
 ## 
 
-## Data Preprocess
+# Data Preprocess
 
-### Simple analysis on the dataset
+## Simple analysis on the dataset
 
 ```{r}
 trainsetRatio <- trainset %>%
@@ -85,7 +103,7 @@ trainsetRatio <- trainset %>%
 trainsetRatio
 ```
 
-### Dataset split according to target ratio
+## Dataset split according to target ratio
 
 ```{r}
 total <- nrow(trainset)
@@ -128,14 +146,18 @@ trainset
 valset
 ```
 
-### Replace the whitespace unicode %20 in *keywords* variable and newline character \n in text
+## Replace the whitespace unicode %20 in *keywords* variable and newline character \n in text
 
 ```{r}
 replace_space_unicode <- function(dataset){
-  dataset %>% mutate(
-    keyword = str_replace_all(keyword, "%20", " "),
-    text = str_replace_all(text, "\n", " ")
-  )
+  dataset %>%
+    mutate(
+      keyword = str_replace_all(keyword, "%20", " "),
+      text = str_replace_all(text, "\n", " ")
+    ) %>%
+    mutate(
+      keyword = na_if(keyword, "")
+    )
 }
 replace_new_line <- function(dataset){
   dataset %>% mutate(
@@ -145,7 +167,15 @@ replace_new_line <- function(dataset){
 tidy_trainset <- trainset %>%
   replace_space_unicode() %>%
   replace_new_line()
-tidy_trainset %>% filter(id == 2899)
+tidy_trainset
+
+tidy_valid <- valset %>%
+  replace_space_unicode() %>%
+  replace_new_line()
+
+tidy_test <- testset %>%
+  replace_space_unicode() %>%
+  replace_new_line()
 
 tidy_trainset %>%
   group_by(keyword) %>%
@@ -154,7 +184,7 @@ tidy_trainset %>%
   ungroup()
 ```
 
-### Extract Tags, '\@'s and links in *text* variable
+## Extract Tags, '\@'s and links in *text* variable
 
 ```{r}
 extract_at <- function(dataset){
@@ -209,9 +239,28 @@ tidy_trainset <- tidy_trainset %>%
   extract_at() %>%
   extract_links()
 tidy_trainset
+
+tidy_valid <- tidy_valid %>%
+  extract_tags() %>%
+  extract_at() %>%
+  extract_links()
+
+tidy_test <- tidy_test %>%
+  extract_tags() %>%
+  extract_at() %>%
+  extract_links()
 ```
 
-### Compute the length of each *text* variable
+## Compute the length of each *text* variable
+
+```{r}
+tidy_trainset %>%
+  mutate(text = tolower(text)) %>%
+  separate_rows(text) %>%
+  mutate(word = str_extract(text, "[a-z]+")) %>%
+  filter(is.na(word) == F)
+tidy_valid
+```
 
 ```{r}
 extract_char_length <- function(dataset){
@@ -220,23 +269,60 @@ extract_char_length <- function(dataset){
 extract_word_count <- function(dataset){
   dataset %>% mutate(wordCount = str_count(text, "\\w+"))
 }
+# extract_unique_word_count <- function(dataset){
+#   dataset %>% mutate(wordCount = str_count())
+# }
 
 classify_char_length <- function(dataset){
-  dataset %>% mutate(
-    charLengthType = case_when(
-      charLength <= 50 ~ "short",
-      charLength <= 100 ~ "medium",
-      charLength <= 150 ~ "long",
-      T ~ "other"
+  dataset %>%
+    mutate(
+      charLengthType = case_when(
+        charLength <= 50 ~ "short",
+        charLength <= 100 ~ "medium",
+        charLength <= 150 ~ "long",
+        T ~ "other"
+      )
     )
-  )
+}
+classify_word_length <- function(dataset){
+  dataset %>%
+    mutate(
+      wordCountType = case_when(
+        wordCount <= 5 ~ "0-5",
+        wordCount <= 10 ~ "5-10",
+        wordCount <= 15 ~ "10-15",
+        wordCount <= 20 ~ "15-20",
+        wordCount <= 25 ~ "20-25",
+        wordCount <= 30 ~ "25-30",
+        T ~ "other"
+      )
+    )
 }
 
 tidy_trainset <- tidy_trainset %>%
   extract_char_length() %>%
   extract_word_count()
+
+tidy_valid <- tidy_valid %>%
+  extract_char_length() %>%
+  extract_word_count()
+
+tidy_test <- tidy_test %>%
+  extract_char_length() %>%
+  extract_word_count()
+
 tidy_trainset <- tidy_trainset %>%
-  classify_char_length()
+  classify_char_length() %>%
+  classify_word_length()
+
+tidy_valid <- tidy_valid %>%
+  classify_char_length() %>%
+  classify_word_length()
+
+tidy_test <- tidy_test %>%
+  classify_char_length() %>%
+  classify_word_length()
+
 tidy_trainset %>%
   mutate(target = as.factor(target)) %>%
   ggplot() +
@@ -251,20 +337,83 @@ tidy_trainset %>%
 tidy_trainset %>%
   mutate(target = as.factor(target)) %>%
   ggplot() +
-  geom_histogram(aes(x = wordCount, fill = as.factor(target)))
+  geom_histogram(aes(x = wordCount, fill = as.factor(target))) +
+  labs(
+    x = "Word Count",
+    y = "Count",
+    title = "Distribution of Word Count"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+tidy_trainset %>%
+  mutate(target = as.factor(target)) %>%
+  ggplot() +
+  geom_bar(aes(x = wordCountType, fill = target)) +
+  labs(
+    x = "Word Count Type",
+    y = "Count",
+    title = "Distribution of Length Types"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
 
 tidy_trainset
 ```
 
-### Ratio of each keyword vs target
+## Ratio of each keyword vs target
 
 ```{r}
 keywordRatio <- tidy_trainset %>%
-  group_by(keyword) %>%
-  summarise(disasterRatio = sum(target) / n()) %>%
-  arrange(desc(disasterRatio))
+  group_by(keyword, target) %>%
+  summarise(n = n()) %>%
+  mutate(ratio = n / sum(n)) %>%
+  ungroup() %>%
+  arrange(desc(n), desc(ratio))
 keywordRatio
 ```
+
+## Create disaster keyword
+
+```{r}
+count_threshold <- 20
+ratio_threshold <- 0.8
+disasterKeywords <- keywordRatio %>%
+  filter(n >= count_threshold & target == 1 & ratio >= ratio_threshold) %>%
+  .$keyword
+
+checkDisasterKeyword <- function(dataset, disasterKeywords){
+  dataset %>%
+    mutate(
+      containsDisasterKeyword = str_detect(
+        keyword,
+        paste(disasterKeywords, collapse = "|")
+      )
+    ) %>%
+    mutate(containsDisasterKeyword = case_when(
+      containsDisasterKeyword == T ~ "True",
+      containsDisasterKeyword == F ~ "False",
+      T ~ "Empty"
+    ))
+}
+
+tidy_trainset <- checkDisasterKeyword(tidy_trainset, disasterKeywords)
+  # tidy_trainset %>%
+  # mutate(
+  #   containsDisasterKeyword = str_detect(
+  #     keyword,
+  #     paste(disasterKeywords, collapse = "|")
+  #   )
+  # ) %>%
+  # mutate(containsDisasterKeyword = case_when(
+  #   containsDisasterKeyword == T ~ "True",
+  #   containsDisasterKeyword == F ~ "False",
+  #   T ~ "Empty"
+  # ))
+tidy_valid <- checkDisasterKeyword(tidy_valid, disasterKeywords)
+tidy_test <- checkDisasterKeyword(tidy_test, disasterKeywords)
+tidy_trainset
+```
+
+## Ratio of each tags vs target
 
 ```{r}
 tidy_trainset %>%
@@ -272,13 +421,132 @@ tidy_trainset %>%
   separate_rows(tags, sep = ',') %>%
   group_by(tags, target) %>%
   summarise(n = n()) %>%
-  # group_by(tags) %>%
   mutate(ratio = n / sum(n)) %>%
-  filter(n >= 10) %>%
+  ungroup() %>%
   arrange(desc(n), desc(ratio), tags)
 ```
 
-### Parse *location* variable (todo)
+## Ratio of each at vs target
+
+```{r}
+atRatio <- tidy_trainset %>%
+  filter(!is.na(at)) %>%
+  separate_rows(at, sep = ',') %>%
+  group_by(at, target) %>%
+  summarise(n = n()) %>%
+  mutate(ratio = n / sum(n)) %>%
+  arrange(desc(n), desc(ratio), at)
+atRatio
+```
+
+## Create disaster at
+
+```{r}
+count_threshold <- 5
+ratio_threshold <- 0.7
+disasterAt <- atRatio %>%
+  filter(target == 1 & ratio >= ratio_threshold & n >= count_threshold) %>%
+  .$at
+
+checkDisasterAt <- function(dataset, disasterAt){
+  dataset %>%
+    mutate(
+      containsDisasterAt = str_detect(
+        at,
+        paste(disasterAt, collapse = "|")
+      )
+    ) %>% 
+    mutate(containsDisasterAt = case_when(
+      containsDisasterAt == T ~ "True",
+      containsDisasterAt == F ~ "False",
+      T ~ "Empty"
+    ))
+}
+
+tidy_trainset <- checkDisaterAt(tidy_trainset, disasterAt)
+  # tidy_trainset %>%
+  # mutate(
+  #   containsDisasterAt = str_detect(
+  #     at,
+  #     paste(disasterAt, collapse = "|")
+  #   )
+  # ) %>% 
+  # mutate(containsDisasterAt = case_when(
+  #   containsDisasterAt == T ~ "True",
+  #   containsDisasterAt == F ~ "False",
+  #   T ~ "Empty"
+  # ))
+tidy_valid <- checkDisasterAt(tidy_valid, disasterAt)
+tidy_test <- checkDisaterAt(tidy_test, disasterAt)
+tidy_trainset
+```
+
+## Ratio of each word in text vs target
+
+```{r}
+wordRatio <- tidy_trainset %>%
+  mutate(word = tolower(text)) %>%
+  separate_rows(word) %>%
+  mutate(word = str_extract(word, "[a-z]+")) %>%
+  filter(is.na(word) == F & word != "") %>%
+  anti_join(stop_words) %>%
+  select(word, target) %>%
+  group_by(word, target) %>%
+  summarise(n = n()) %>%
+  mutate(ratio = n / sum(n)) %>%
+  ungroup() %>%
+  arrange(desc(n), desc(ratio)) %>%
+  filter(target == 1 & ratio >= ratio_threshold & n >= count_threshold)
+wordRatio
+```
+
+## Create disaster words
+
+```{r}
+excludedWord <- c(
+  "pm",
+  "mh",
+  "yr",
+  "california",
+  "hiroshima",
+  "japan",
+  "malaysia",
+  "saudi",
+  "boy",
+  "island",
+  "pkk"
+)
+count_threshold <- 25
+ratio_threshold <- 0.65
+disasterWords <- wordRatio %>%
+  filter(target == 1 & ratio >= ratio_threshold & n >= count_threshold & !(word %in% excluded_word)) %>%
+  .$word
+
+checkDisasterWord <- function(dataset, disasterWords){
+  dataset %>%
+    mutate(
+      containsDisasterWord = str_detect(
+        text,
+        paste(disaster_words, collapse = "|")
+      )
+    )
+}
+
+tidy_trainset <- checkDisasterWord(tidy_trainset, disasterWords)
+  # tidy_trainset %>%
+  # mutate(
+  #   containsDisasterWord = str_detect(
+  #     text,
+  #     paste(disaster_words, collapse = "|")
+  #   )
+  # )
+tidy_valid <- checkDisasterWord(tidy_valid, disasterWords)
+tidy_test <- checkDisasterWord(tidy_test, disasterWords)
+
+tidy_trainset
+```
+
+## Parse *location* variable (todo)
 
 ```{r}
 withLocation <- tidy_trainset %>%
@@ -304,7 +572,7 @@ country_t <- ISO_3166_1 %>%
 country_t
 ```
 
-## Lexicon
+# Lexicon
 
 ```{r}
 lexicon_nrc() %>%
@@ -313,27 +581,104 @@ lexicon_nrc_eil() %>%
   filter(term == 'fire')
 ```
 
-## Random Forest Training
+# Random Forest Training
 
 ```{r}
 # tidy_trainset
 input <- tidy_trainset %>%
-  mutate(
-    target = as.factor(target),
-    hasTag = case_when(
-      tags == '' ~ 0,
-      T ~ 1
-    ),
-    hasAt = case_when(
-      at == '' ~ 0,
-      T ~ 1
-    )
-  ) %>%
-  select(target, hasTag, hasAt)
-randomForest(target ~., data = input, importance = T)
+  # mutate(
+  #   target = as.factor(target)
+  #   # hasTag = case_when(
+  #   #   is.na(tags) ~ 0,
+  #   #   T ~ 1
+  #   # ),
+  #   # hasAt = case_when(
+  #   #   is.na(at) ~ 0,
+  #   #   T ~ 1
+  #   # ),
+  #   # hasLink = case_when(
+  #   #   is.na(links) ~ 0,
+  #   #   T ~ 1
+  #   # )
+  # ) %>%
+  # select(target, hasTag, hasAt, charLengthType, wordCountType, keyword, containsDisasterWord)
+  select(target, wordCountType, containsDisasterWord, containsDisasterKeyword, containsDisasterAt)
+
+# for(i in seq(from = 10, to = 500, by = 10)){
+#   rf <- randomForest(
+#     target ~.,
+#     data = input,
+#     importance = T,
+#     ntree = i,
+#     mtry = 3
+#   )
+#   # print(rf$err.rate)
+#   cat(paste0("ntree = ", i, "; OOB = ", rf$err.rate[i, 1]), "\n")
+# }
+# rf <- randomForest(target ~., data = input, importance = T, ntree = 300)
+# rf
+# 
+valid_input <- tidy_valid %>%
+  mutate(target = as.factor(target)) %>%
+  select(target, wordCountType, containsDisasterWord, containsDisasterKeyword, containsDisasterAt)
+
+test_input <- tidy_test %>%
+  mutate(target = as.factor(target)) %>%
+  select(target, wordCountType, containsDisasterWord, containsDisasterKeyword, containsDisasterAt)
+
+p1 <- predict(rf, valid_input)
+p1 %>%
+  confusionMatrix(valid_input$target)
 ```
 
-## Twitter API
+```{r}
+input <- tidy_trainset %>%
+  mutate(
+    containsDisasterAt = as.numeric(factor(containsDisasterAt)),
+    containsDisasterWord = as.numeric(factor(containsDisasterWord)),
+    containsDisasterKeyword = as.numeric(factor(containsDisasterKeyword)),
+    wordCountType = as.numeric(factor(wordCountType))
+  ) %>%
+  select(target, charLength, wordCount, containsDisasterKeyword, containsDisasterAt, containsDisasterWord)
+
+library(neuralnet)
+# data(iris)
+# iris
+network <- neuralnet(
+    target ~ charLength + wordCount,
+    data = input,
+    hidden = 3,
+    linear.output = F
+    # stepmax = 10000
+  )
+```
+
+```{r}
+network$result.matrix
+plot(network)
+```
+
+```{r}
+input <- tidy_valid %>%
+  mutate(
+    containsDisasterAt = as.numeric(factor(containsDisasterAt)),
+    containsDisasterWord = as.numeric(factor(containsDisasterWord)),
+    containsDisasterKeyword = as.numeric(factor(containsDisasterKeyword)),
+    wordCountType = as.numeric(factor(wordCountType))
+  ) %>%
+  select(target, charLength, wordCount)
+```
+
+```{r}
+pred.prob <- predict(network, input)
+pred.class <- ifelse(pred.prob > 0.5, 1, 0)
+t <- table(pred.class, input$target)
+t
+sum(diag(t))/sum(t)
+
+```
+
+# Twitter API
 
 ```{r}
 twitter <- fromJSON("twitter.json")
