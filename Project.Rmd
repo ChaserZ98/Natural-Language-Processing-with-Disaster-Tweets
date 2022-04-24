@@ -190,16 +190,21 @@ tidy_trainset %>%
 extract_at <- function(dataset){
   dataset %>%
     mutate(
-      at = map_chr(
-        map(
-          .x = str_extract_all(tolower(.$text), "@\\S+"),
-          unlist
+      at = str_replace_all(
+        map_chr(
+          map(
+            .x = str_extract_all(tolower(.$text), "@\\S+"),
+            unlist
+          ),
+          ~case_when(
+            paste(.x, collapse = ',') == '' ~ NA_character_,
+            T ~ paste(.x, collapse = ',')
+          )
         ),
-        ~case_when(
-          paste(.x, collapse = ',') == '' ~ NA_character_,
-          T ~ paste(.x, collapse = ',')
-        )
+        '@',
+        ''
       ),
+      at_count = str_count(tolower(.$text), "@\\S+"),
       text = str_replace_all(text, "@\\S+", '')
     )
 }
@@ -208,7 +213,7 @@ extract_links <- function(dataset){
     mutate(
       links = map_chr(
         map(
-          .x = str_extract_all(text, '\\S+\\.\\S+/\\S\\s*'),
+          .x = str_extract_all(tolower(.$text), '\\S+\\.\\S+/\\S\\s*'),
           unlist
         ),
         ~case_when(
@@ -216,22 +221,29 @@ extract_links <- function(dataset){
           T ~ paste(.x, collapse = ',')
         )
       ),
+      link_count = str_count(tolower(.$text), '\\S+\\.\\S+/\\S\\s*'),
       text = str_replace_all(text, "\\S+//\\S+\\.?\\S+\\S\\s*", '')
     )
 }
 extract_tags <- function(dataset){
   dataset %>%
     mutate(
-      tags = map_chr(
-        map(
-          .x = str_extract_all(tolower(.$text), "#\\S+"),
-          unlist
+      tags = str_replace_all(
+        map_chr(
+          map(
+            .x = str_extract_all(tolower(.$text), "#\\S+"),
+            unlist
+          ),
+          ~case_when(
+            paste(.x, collapse = ',') == '' ~ NA_character_,
+            T ~ paste(.x, collapse = ',')
+          )
         ),
-        ~case_when(
-          paste(.x, collapse = ',') == '' ~ NA_character_,
-          T ~ paste(.x, collapse = ',')
-        )
-      )
+        '#',
+        ''
+      ),
+      tag_count = str_count(tolower(.$text), "#\\S+"),
+      text = str_replace_all(text, "#", '')
     )
 }
 tidy_trainset <- tidy_trainset %>%
@@ -254,32 +266,55 @@ tidy_test <- tidy_test %>%
 ## Compute the length of each *text* variable
 
 ```{r}
-tidy_trainset %>%
-  mutate(text = tolower(text)) %>%
-  separate_rows(text) %>%
-  mutate(word = str_extract(text, "[a-z]+")) %>%
-  filter(is.na(word) == F)
-tidy_valid
-```
-
-```{r}
 extract_char_length <- function(dataset){
-  dataset %>% mutate(charLength = nchar(.$text))
+  dataset %>%
+    mutate(char_length = nchar(.$text))
 }
 extract_word_count <- function(dataset){
-  dataset %>% mutate(wordCount = str_count(text, "\\w+"))
+  dataset %>%
+    mutate(word_count = str_count(text, "\\w+"))
 }
-# extract_unique_word_count <- function(dataset){
-#   dataset %>% mutate(wordCount = str_count())
-# }
+extract_mean_word_length <- function(dataset){
+  dataset %>%
+    mutate(mean_word_length = char_length/word_count)
+}
+extract_unique_word_count <- function(dataset){
+  dataset %>%
+    mutate(
+      unique_word_count = map_int(
+        .$text,
+        ~ .x %>% str_extract_all("\\w+") %>% unlist %>% n_distinct
+      )
+    )
+}
+extract_puncuation_count <- function(dataset){
+  dataset %>%
+    mutate(
+      punc_count = str_count(text, "[[:punct:]]+")
+    )
+}
+extract_stop_word_count <- function(dataset){
+  dataset %>%
+  mutate(
+    stop_word_count = map_int(
+      text,
+      ~ .x %>%
+        tolower() %>%
+        str_split(' ') %>%
+        map(., ~case_when(. %in% stop_words$word ~ T, T ~ F)) %>%
+        unlist %>%
+        sum()
+    )
+  )
+}
 
 classify_char_length <- function(dataset){
   dataset %>%
     mutate(
-      charLengthType = case_when(
-        charLength <= 50 ~ "short",
-        charLength <= 100 ~ "medium",
-        charLength <= 150 ~ "long",
+      char_length_type = case_when(
+        char_length <= 50 ~ "short",
+        char_length <= 100 ~ "medium",
+        char_length <= 150 ~ "long",
         T ~ "other"
       )
     )
@@ -287,13 +322,13 @@ classify_char_length <- function(dataset){
 classify_word_length <- function(dataset){
   dataset %>%
     mutate(
-      wordCountType = case_when(
-        wordCount <= 5 ~ "0-5",
-        wordCount <= 10 ~ "5-10",
-        wordCount <= 15 ~ "10-15",
-        wordCount <= 20 ~ "15-20",
-        wordCount <= 25 ~ "20-25",
-        wordCount <= 30 ~ "25-30",
+      word_count_type = case_when(
+        word_count <= 5 ~ "0-5",
+        word_count <= 10 ~ "5-10",
+        word_count <= 15 ~ "10-15",
+        word_count <= 20 ~ "15-20",
+        word_count <= 25 ~ "20-25",
+        word_count <= 30 ~ "25-30",
         T ~ "other"
       )
     )
@@ -301,15 +336,27 @@ classify_word_length <- function(dataset){
 
 tidy_trainset <- tidy_trainset %>%
   extract_char_length() %>%
-  extract_word_count()
+  extract_word_count() %>%
+  extract_mean_word_length() %>%
+  extract_unique_word_count() %>%
+  extract_puncuation_count() %>%
+  extract_stop_word_count()
 
 tidy_valid <- tidy_valid %>%
   extract_char_length() %>%
-  extract_word_count()
+  extract_word_count() %>%
+  extract_mean_word_length() %>%
+  extract_unique_word_count() %>%
+  extract_puncuation_count() %>%
+  extract_stop_word_count()
 
 tidy_test <- tidy_test %>%
   extract_char_length() %>%
-  extract_word_count()
+  extract_word_count() %>%
+  extract_mean_word_length() %>%
+  extract_unique_word_count() %>%
+  extract_puncuation_count() %>%
+  extract_stop_word_count()
 
 tidy_trainset <- tidy_trainset %>%
   classify_char_length() %>%
@@ -326,7 +373,7 @@ tidy_test <- tidy_test %>%
 tidy_trainset %>%
   mutate(target = as.factor(target)) %>%
   ggplot() +
-  geom_bar(aes(x = charLengthType, fill = target)) +
+  geom_bar(aes(x = char_length_type, fill = target)) +
   labs(
     x = "Length Type",
     y = "Count",
@@ -337,18 +384,18 @@ tidy_trainset %>%
 tidy_trainset %>%
   mutate(target = as.factor(target)) %>%
   ggplot() +
-  geom_histogram(aes(x = wordCount, fill = as.factor(target))) +
+  geom_histogram(aes(x = word_count, fill = as.factor(target))) +
   labs(
-    x = "Word Count",
+    x = "word count",
     y = "Count",
-    title = "Distribution of Word Count"
+    title = "Distribution of word count"
   ) +
   theme(plot.title = element_text(hjust = 0.5))
 
 tidy_trainset %>%
   mutate(target = as.factor(target)) %>%
   ggplot() +
-  geom_bar(aes(x = wordCountType, fill = target)) +
+  geom_bar(aes(x = word_count_type, fill = target)) +
   labs(
     x = "Word Count Type",
     y = "Count",
@@ -362,13 +409,13 @@ tidy_trainset
 ## Ratio of each keyword vs target
 
 ```{r}
-keywordRatio <- tidy_trainset %>%
+keyword_ratio <- tidy_trainset %>%
   group_by(keyword, target) %>%
   summarise(n = n()) %>%
   mutate(ratio = n / sum(n)) %>%
   ungroup() %>%
   arrange(desc(n), desc(ratio))
-keywordRatio
+keyword_ratio
 ```
 
 ## Create disaster keyword
@@ -376,26 +423,26 @@ keywordRatio
 ```{r}
 count_threshold <- 20
 ratio_threshold <- 0.8
-disasterKeywords <- keywordRatio %>%
+disaster_keywords <- keyword_ratio %>%
   filter(n >= count_threshold & target == 1 & ratio >= ratio_threshold) %>%
   .$keyword
 
-checkDisasterKeyword <- function(dataset, disasterKeywords){
+checkDisasterKeyword <- function(dataset, disaster_keywords){
   dataset %>%
     mutate(
-      containsDisasterKeyword = str_detect(
+      contains_disaster_keyword = str_detect(
         keyword,
-        paste(disasterKeywords, collapse = "|")
+        paste(disaster_keywords, collapse = "|")
       )
     ) %>%
-    mutate(containsDisasterKeyword = case_when(
-      containsDisasterKeyword == T ~ "True",
-      containsDisasterKeyword == F ~ "False",
+    mutate(contains_disaster_keyword = case_when(
+      contains_disaster_keyword == T ~ "True",
+      contains_disaster_keyword == F ~ "False",
       T ~ "Empty"
     ))
 }
 
-tidy_trainset <- checkDisasterKeyword(tidy_trainset, disasterKeywords)
+tidy_trainset <- checkDisasterKeyword(tidy_trainset, disaster_keywords)
   # tidy_trainset %>%
   # mutate(
   #   containsDisasterKeyword = str_detect(
@@ -408,8 +455,8 @@ tidy_trainset <- checkDisasterKeyword(tidy_trainset, disasterKeywords)
   #   containsDisasterKeyword == F ~ "False",
   #   T ~ "Empty"
   # ))
-tidy_valid <- checkDisasterKeyword(tidy_valid, disasterKeywords)
-tidy_test <- checkDisasterKeyword(tidy_test, disasterKeywords)
+tidy_valid <- checkDisasterKeyword(tidy_valid, disaster_keywords)
+tidy_test <- checkDisasterKeyword(tidy_test, disaster_keywords)
 tidy_trainset
 ```
 
@@ -429,14 +476,14 @@ tidy_trainset %>%
 ## Ratio of each at vs target
 
 ```{r}
-atRatio <- tidy_trainset %>%
+at_ratio <- tidy_trainset %>%
   filter(!is.na(at)) %>%
   separate_rows(at, sep = ',') %>%
   group_by(at, target) %>%
   summarise(n = n()) %>%
   mutate(ratio = n / sum(n)) %>%
   arrange(desc(n), desc(ratio), at)
-atRatio
+at_ratio
 ```
 
 ## Create disaster at
@@ -444,26 +491,26 @@ atRatio
 ```{r}
 count_threshold <- 5
 ratio_threshold <- 0.7
-disasterAt <- atRatio %>%
+disaster_at <- at_ratio %>%
   filter(target == 1 & ratio >= ratio_threshold & n >= count_threshold) %>%
   .$at
 
-checkDisasterAt <- function(dataset, disasterAt){
+checkDisasterAt <- function(dataset, disaster_at){
   dataset %>%
     mutate(
-      containsDisasterAt = str_detect(
+      contains_disaster_at = str_detect(
         at,
-        paste(disasterAt, collapse = "|")
+        paste(disaster_at, collapse = "|")
       )
     ) %>% 
-    mutate(containsDisasterAt = case_when(
-      containsDisasterAt == T ~ "True",
-      containsDisasterAt == F ~ "False",
+    mutate(contains_disaster_at = case_when(
+      contains_disaster_at == T ~ "True",
+      contains_disaster_at == F ~ "False",
       T ~ "Empty"
     ))
 }
 
-tidy_trainset <- checkDisaterAt(tidy_trainset, disasterAt)
+tidy_trainset <- checkDisasterAt(tidy_trainset, disaster_at)
   # tidy_trainset %>%
   # mutate(
   #   containsDisasterAt = str_detect(
@@ -476,15 +523,15 @@ tidy_trainset <- checkDisaterAt(tidy_trainset, disasterAt)
   #   containsDisasterAt == F ~ "False",
   #   T ~ "Empty"
   # ))
-tidy_valid <- checkDisasterAt(tidy_valid, disasterAt)
-tidy_test <- checkDisaterAt(tidy_test, disasterAt)
+tidy_valid <- checkDisasterAt(tidy_valid, disaster_at)
+tidy_test <- checkDisasterAt(tidy_test, disaster_at)
 tidy_trainset
 ```
 
 ## Ratio of each word in text vs target
 
 ```{r}
-wordRatio <- tidy_trainset %>%
+word_ratio <- tidy_trainset %>%
   mutate(word = tolower(text)) %>%
   separate_rows(word) %>%
   mutate(word = str_extract(word, "[a-z]+")) %>%
@@ -497,13 +544,13 @@ wordRatio <- tidy_trainset %>%
   ungroup() %>%
   arrange(desc(n), desc(ratio)) %>%
   filter(target == 1 & ratio >= ratio_threshold & n >= count_threshold)
-wordRatio
+word_ratio
 ```
 
 ## Create disaster words
 
 ```{r}
-excludedWord <- c(
+excluded_words <- c(
   "pm",
   "mh",
   "yr",
@@ -518,21 +565,21 @@ excludedWord <- c(
 )
 count_threshold <- 25
 ratio_threshold <- 0.65
-disasterWords <- wordRatio %>%
-  filter(target == 1 & ratio >= ratio_threshold & n >= count_threshold & !(word %in% excluded_word)) %>%
+disaster_words <- word_ratio %>%
+  filter(target == 1 & ratio >= ratio_threshold & n >= count_threshold & !(word %in% excluded_words)) %>%
   .$word
 
-checkDisasterWord <- function(dataset, disasterWords){
+checkDisasterWord <- function(dataset, disaster_words){
   dataset %>%
     mutate(
-      containsDisasterWord = str_detect(
+      contains_disaster_word = str_detect(
         text,
         paste(disaster_words, collapse = "|")
       )
     )
 }
 
-tidy_trainset <- checkDisasterWord(tidy_trainset, disasterWords)
+tidy_trainset <- checkDisasterWord(tidy_trainset, disaster_words)
   # tidy_trainset %>%
   # mutate(
   #   containsDisasterWord = str_detect(
@@ -540,8 +587,8 @@ tidy_trainset <- checkDisasterWord(tidy_trainset, disasterWords)
   #     paste(disaster_words, collapse = "|")
   #   )
   # )
-tidy_valid <- checkDisasterWord(tidy_valid, disasterWords)
-tidy_test <- checkDisasterWord(tidy_test, disasterWords)
+tidy_valid <- checkDisasterWord(tidy_valid, disaster_words)
+tidy_test <- checkDisasterWord(tidy_test, disaster_words)
 
 tidy_trainset
 ```
@@ -632,30 +679,65 @@ p1 %>%
 ```
 
 ```{r}
+tidy_trainset
 input <- tidy_trainset %>%
   mutate(
-    containsDisasterAt = as.numeric(factor(containsDisasterAt)),
-    containsDisasterWord = as.numeric(factor(containsDisasterWord)),
-    containsDisasterKeyword = as.numeric(factor(containsDisasterKeyword)),
-    wordCountType = as.numeric(factor(wordCountType))
+    contains_disaster_at = as.numeric(factor(contains_disaster_at)),
+    contains_disaster_word = as.numeric(factor(contains_disaster_word)),
+    contains_disaster_keyword = as.numeric(factor(contains_disaster_keyword)),
+    word_count_type = as.numeric(factor(word_count_type))
   ) %>%
-  select(target, charLength, wordCount, containsDisasterKeyword, containsDisasterAt, containsDisasterWord)
-
-library(neuralnet)
-# data(iris)
-# iris
-network <- neuralnet(
-    target ~ charLength + wordCount,
-    data = input,
-    hidden = 3,
-    linear.output = F
-    # stepmax = 10000
+  select(
+    target,
+    tag_count,
+    at_count,
+    link_count,
+    char_length,
+    word_count,
+    mean_word_length,
+    unique_word_count,
+    punc_count,
+    stop_word_count,
+    contains_disaster_keyword,
+    contains_disaster_at,
+    contains_disaster_word
   )
+input
 ```
 
 ```{r}
+library(neuralnet)
+
+network <- neuralnet(
+    target ~
+      tag_count +
+      at_count +
+      link_count +
+      char_length +
+      word_count +
+      mean_word_length +
+      unique_word_count +
+      punc_count +
+      stop_word_count
+    ,
+    data = input,
+    rep = 2,
+    hidden = 3,
+    threshold = 0.1,
+    linear.output = F,
+    lifesign = "full",
+    act.fct = 'logistic',
+    err.fct = 'ce',
+    # stepmax = 1000000,
+    likelihood = T
+  )
 network$result.matrix
 plot(network)
+```
+
+```{r}
+network$result.matrix[1,]
+plot(network, rep = "best")
 ```
 
 ```{r}
@@ -670,9 +752,15 @@ input <- tidy_valid %>%
 ```
 
 ```{r}
-pred.prob <- predict(network, input)
-pred.class <- ifelse(pred.prob > 0.5, 1, 0)
-t <- table(pred.class, input$target)
+network.results <- compute(network, input, rep = which.min(network$result.matrix[1, ]))
+results <- data.frame(actual = input$target, prediction = network.results$net.result)
+results
+# pred.prob <- predict(network, input)
+# pred.class <- ifelse(pred.prob > 0.5, 1, 0)
+# pred.prob
+pred.class <- sapply(results, round, digits=0) %>% as_tibble
+pred.class
+t <- table(pred.class$actual, input$target)
 t
 sum(diag(t))/sum(t)
 
