@@ -1,6 +1,6 @@
 ---
 title: "Final Project"
-author: "Feiyu Zheng (fz114) & Junyi Li()"
+author: "Feiyu Zheng (fz114) & Junyi Li() & Ziyu Zhou ()"
 date: "2022/3/27"
 output:
   pdf_document: default
@@ -35,7 +35,7 @@ options(dplyr.summarise.inform = F)
 ## Download source data from kaggle
 
 ```{r warning=FALSE}
-kaggle <- fromJSON("kaggle.json")
+kaggle <- fromJSON("./Config/kaggle.json")
 
 if(!dir.exists("./Data")){
   dir.create("./Data")
@@ -1026,6 +1026,6 @@ sum(diag(t))/sum(t)
 # Twitter API
 
 ```{r}
-twitter <- fromJSON("twitter.json")
+twitter <- fromJSON("./Config/twitter.json")
 twitterAPIHeader <- c('Authorization' = sprintf(""))
 ```
