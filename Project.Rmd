@@ -23,12 +23,14 @@ library(curl)
 library(jsonlite)
 library(randomForest)
 library(caret)
+library(gridExtra)
+library(scales)
 
 # suppress the warning message of dplyr
 options(dplyr.summarise.inform = F)
 ```
 
-# Dataset
+# Obtain Data
 
 ## Download source data from kaggle
 
@@ -39,10 +41,28 @@ if(!dir.exists("./Data")){
   dir.create("./Data")
 }
 if(!file.exists("./Data/train.csv")){
-  data <- httr::GET("https://www.kaggle.com/api/v1/competitions/data/download/17777/train.csv", httr::authenticate(kaggle$username, kaggle$key, type = "basic"))
+  data <- httr::GET(
+    "https://www.kaggle.com/api/v1/competitions/data/download/17777/train.csv",
+    httr::authenticate(
+      kaggle$username,
+      kaggle$key,
+      type = "basic"
+    )
+  )
   download.file(data$url, "./Data/train.csv")
-  data <- httr::GET("https://www.kaggle.com/api/v1/competitions/data/download/17777/test.csv", httr::authenticate(kaggle$username, kaggle$key, type = "basic"))
+  data <- httr::GET(
+    "https://www.kaggle.com/api/v1/competitions/data/download/17777/test.csv",
+    httr::authenticate(
+      kaggle$username,
+      kaggle$key,
+      type = "basic"
+    )
+  )
   download.file(data$url, "./Data/test.csv")
+  download.file(
+    "https://raw.githubusercontent.com/shahp7575/disaster-tweets/master/socialmedia-disaster-tweets-DFE.csv",
+    "./Data/socialmedia-disaster-tweets-DFE.csv"
+  )
 }
 ```
 
@@ -58,39 +78,93 @@ trainset <- read.csv(
   as_tibble()
 
 testset <- read.csv(
-  "./Data/test_result.csv",
+  "./Data/test.csv",
   encoding = encoding,
   header = T
 ) %>%
   as_tibble()
 
-# result_set <- read.csv(
-#   "./Data/socialmedia-disaster-tweets-DFE.csv",
-#   encoding = encoding,
-#   header = T
-# ) %>%
-#   as_tibble()
+# add target value to testset
+test_with_target <- read.csv(
+  "./Data/socialmedia-disaster-tweets-DFE.csv",
+  encoding = encoding,
+  header = T
+) %>%
+  as_tibble()
+
+test_with_target %>%
+  mutate(id = row_number() - 1) %>%
+  select(id, text, choose_one) %>%
+  inner_join(testset, by = 'id') %>%
+  select(id, keyword, location, text.y, choose_one) %>%
+  rename(text = text.y, target = choose_one) %>%
+  mutate(target = case_when(
+    target == "Relevant" ~ as.integer(1),
+    T ~ as.integer(0)
+  )) %>%
+  write.csv(file = "./Data/test.csv", row.names = F)
+
+testset <- read.csv(
+  "./Data/test.csv",
+  encoding = encoding,
+  header = T
+) %>%
+  as_tibble()
 
 trainset
 testset
-# result_set %>%
-#   mutate(id = row_number() - 1) %>%
-#   select(id, text, choose_one) %>%
-#   inner_join(testset, by = 'id') %>%
-#   select(id, keyword, location, text.y, choose_one) %>%
-#   rename(text = text.y, target = choose_one) %>%
-#   mutate(target = case_when(
-#     target == "Relevant" ~ as.integer(1),
-#     T ~ as.integer(0)
-#   )) %>%
-#   write.csv(file = "./Data/test_result.csv", row.names = F)
 ```
-
-## 
 
 # Data Preprocess
 
 ## Simple analysis on the dataset
+
+### Missing Values
+
+```{r}
+computeMissingValue <- function(dataset){
+  rbind(
+    dataset %>%
+      mutate(isMissing = keyword == '' | is.na(keyword)) %>%
+      group_by(isMissing) %>%
+      count() %>%
+      ungroup() %>%
+      mutate(valueType = "keyword"),
+    dataset %>%
+      mutate(isMissing = location == '' | is.na(location)) %>%
+      group_by(isMissing) %>%
+      count() %>%
+      ungroup() %>%
+      mutate(valueType = "location")
+  )
+}
+
+missingValues_train <- computeMissingValue(trainset)
+missingValues_test <- computeMissingValue(testset)
+
+missingValuePlot_train <- missingValues_train %>%
+  ggplot(aes(x = valueType, y = n, fill = isMissing)) +
+  geom_bar(position = "stack", stat = "identity") +
+  labs(
+    x = "Variable Name",
+    y = "Count",
+    title = "Training Set Missing Value Count"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+missingValuePlot_test <- missingValues_test %>%
+  ggplot(aes(x = valueType, y = n, fill = isMissing)) +
+  geom_bar(position = "stack", stat = "identity") +
+  labs(
+    x = "Variable Name",
+    y = "Count",
+    title = "Testing Set Missing Value Count"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(missingValuePlot_train, missingValuePlot_test, nrow = 1)
+```
+
+### Target Distribution
 
 ```{r}
 trainsetRatio <- trainset %>%
@@ -100,10 +174,42 @@ trainsetRatio <- trainset %>%
   mutate(ratio = round(count / total, 2)) %>%
   select(target, count, total, ratio) %>%
   ungroup()
-trainsetRatio
+pie_chart <- trainsetRatio %>%
+  mutate(
+    target = case_when(
+      target == 1 ~ "Disaster",
+      T ~ "Not Disaster"
+    )
+  ) %>%
+  ggplot(aes(x = '', y = count, fill = target)) +
+  geom_bar(stat = "identity") +
+  geom_text(
+    aes(
+      y = count / 2 + c(0, cumsum(count)[-length(count)]),
+      label = paste(percent(count / total), "(", count, ")", sep = '')
+    ),
+    size = 5
+  ) +
+  coord_polar("y", start = 0) +
+  theme_minimal() +
+  labs(
+    title = "Target Distribution in Training Set",
+    fill = "Target"
+  ) +
+  theme(
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    panel.border = element_blank(),
+    panel.grid = element_blank(),
+    axis.ticks = element_blank(),
+    plot.title = element_text(size = 14, face = "bold", hjust = 0.5),
+    axis.text.x = element_blank()
+  )
+
+grid.arrange(pie_chart, nrow = 1)
 ```
 
-## Dataset split according to target ratio
+## Train-validation split according to target ratio
 
 ```{r}
 total <- nrow(trainset)
@@ -146,7 +252,9 @@ trainset
 valset
 ```
 
-## Replace the whitespace unicode %20 in *keywords* variable and newline character \n in text
+## Data Cleaning
+
+### Replace the white space Unicode *%20* in *keywords* variable and newline character \n in text
 
 ```{r}
 replace_space_unicode <- function(dataset){
@@ -176,15 +284,9 @@ tidy_valid <- valset %>%
 tidy_test <- testset %>%
   replace_space_unicode() %>%
   replace_new_line()
-
-tidy_trainset %>%
-  group_by(keyword) %>%
-  count() %>%
-  arrange(desc(n)) %>%
-  ungroup()
 ```
 
-## Extract Tags, '\@'s and links in *text* variable
+### Extract Tags, '\@'s and links in *text* variable
 
 ```{r}
 extract_at <- function(dataset){
@@ -263,7 +365,35 @@ tidy_test <- tidy_test %>%
   extract_links()
 ```
 
-## Compute the length of each *text* variable
+### (todo) Parse *location* variable
+
+```{r}
+library(ISOcodes)
+country_t <- ISO_3166_1 %>%
+  as_tibble()
+country_t
+```
+
+```{r}
+withLocation <- tidy_trainset %>%
+  mutate(location = str_replace_all(location, regex("[^, [:alpha:]]+"), "")) %>%
+  mutate(location = str_replace_all(location, regex("( )*,( )*"), ", ")) %>%
+  filter(location != '') %>%
+  separate(location, c('location 1', 'location 2'), ', ') %>%
+  filter(!(`location 1` %in% c('', NA)) | !(`location 2`%in% c('', NA)))
+withLocation
+
+withoutLocation <- tidy_trainset %>% anti_join(withLocation, by='id')
+withoutLocation
+USAstate <- cbind(state.abb, state.name) %>%
+  as_tibble() %>%
+  rename(abb = state.abb, name = state.name)
+USAstate
+```
+
+## Feature Engineering
+
+### Compute the length of each *text* variable
 
 ```{r}
 extract_char_length <- function(dataset){
@@ -406,7 +536,7 @@ tidy_trainset %>%
 tidy_trainset
 ```
 
-## Ratio of each keyword vs target
+### Ratio of each keyword vs target
 
 ```{r}
 keyword_ratio <- tidy_trainset %>%
@@ -418,7 +548,7 @@ keyword_ratio <- tidy_trainset %>%
 keyword_ratio
 ```
 
-## Create disaster keyword
+### Create disaster keyword
 
 ```{r}
 count_threshold <- 20
@@ -460,7 +590,7 @@ tidy_test <- checkDisasterKeyword(tidy_test, disaster_keywords)
 tidy_trainset
 ```
 
-## Ratio of each tags vs target
+### Ratio of each tags vs target
 
 ```{r}
 tidy_trainset %>%
@@ -473,7 +603,7 @@ tidy_trainset %>%
   arrange(desc(n), desc(ratio), tags)
 ```
 
-## Ratio of each at vs target
+### Ratio of each at vs target
 
 ```{r}
 at_ratio <- tidy_trainset %>%
@@ -486,7 +616,7 @@ at_ratio <- tidy_trainset %>%
 at_ratio
 ```
 
-## Create disaster at
+### Create disaster at
 
 ```{r}
 count_threshold <- 5
@@ -528,7 +658,7 @@ tidy_test <- checkDisasterAt(tidy_test, disaster_at)
 tidy_trainset
 ```
 
-## Ratio of each word in text vs target
+### Ratio of each word in text vs target
 
 ```{r}
 word_ratio <- tidy_trainset %>%
@@ -547,22 +677,22 @@ word_ratio <- tidy_trainset %>%
 word_ratio
 ```
 
-## Create disaster words
+### Create disaster words
 
 ```{r}
-excluded_words <- c(
-  "pm",
-  "mh",
-  "yr",
-  "california",
-  "hiroshima",
-  "japan",
-  "malaysia",
-  "saudi",
-  "boy",
-  "island",
-  "pkk"
-)
+# excluded_words <- c(
+#   "pm",
+#   "mh",
+#   "yr",
+#   "california",
+#   "hiroshima",
+#   "japan",
+#   "malaysia",
+#   "saudi",
+#   "boy",
+#   "island",
+#   "pkk"
+# )
 count_threshold <- 25
 ratio_threshold <- 0.65
 disaster_words <- word_ratio %>%
@@ -593,33 +723,180 @@ tidy_test <- checkDisasterWord(tidy_test, disaster_words)
 tidy_trainset
 ```
 
-## Parse *location* variable (todo)
+### N-gram analysis
+
+#### Unigram
 
 ```{r}
-withLocation <- tidy_trainset %>%
-  mutate(location = str_replace_all(location, regex("[^, [:alpha:]]+"), "")) %>%
-  mutate(location = str_replace_all(location, regex("( )*,( )*"), ", ")) %>%
-  filter(location != '') %>%
-  separate(location, c('location 1', 'location 2'), ', ') %>%
-  filter(!(`location 1` %in% c('', NA)) | !(`location 2`%in% c('', NA)))
-withLocation
-
-withoutLocation <- tidy_trainset %>% anti_join(withLocation, by='id')
-withoutLocation
-USAstate <- cbind(state.abb, state.name) %>%
-  as.tibble() %>%
-  rename(abb = state.abb, name = state.name)
-USAstate
+unigrams <- tidy_trainset %>%
+  unnest_tokens(unigram, text, token = "ngrams", n = 1) %>%
+  filter(unigram != "NA") %>%
+  filter(str_detect(unigram, "^[a-z]+$")) %>%
+  filter(!(unigram %in% stop_words$word)) %>%
+  group_by(unigram, target) %>%
+  count() %>%
+  ungroup(target) %>%
+  mutate(count = sum(n)) %>%
+  mutate(ratio = n/count) %>%
+  arrange(desc(n), desc(ratio)) %>%
+  ungroup()
+unigrams
 ```
 
 ```{r}
-library(ISOcodes)
-country_t <- ISO_3166_1 %>%
-  as.tibble()
-country_t
+top20DisasterUnigrams <- unigrams %>%
+  filter(target == 1) %>%
+  arrange(desc(n)) %>%
+  select(unigram, n) %>%
+  head(20)
+
+top20DisasterUnigrams %>%
+  ggplot(aes(reorder(unigram, n), n)) +
+  geom_bar(stat = "identity") + 
+  coord_flip() +
+  labs(
+    x = "Unigram",
+    y = "Count",
+    title = "Top 20 Disaster Unigrams"
+  ) + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+top20NonDisasterUnigrams <- unigrams %>%
+  filter(target == 0) %>%
+  arrange(desc(n)) %>%
+  select(unigram, n) %>%
+  head(20)
+
+top20NonDisasterUnigrams %>%
+  ggplot(aes(reorder(unigram, n), n)) +
+  geom_bar(stat = "identity") + 
+  coord_flip() +
+  labs(
+    x = "Unigram",
+    y = "Count",
+    title = "Top 20 Non-Disaster Unigrams"
+  ) + 
+  theme(plot.title = element_text(hjust = 0.5))
 ```
 
-# Lexicon
+#### Bigram
+
+```{r}
+bigrams <- tidy_trainset %>%
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
+  filter(bigram != "NA") %>%
+  separate(bigram, c("word1", "word2"), sep = " ") %>%
+  filter(str_detect(word1, "^[a-z]+$")) %>%
+  filter(str_detect(word2, "^[a-z]+$")) %>%
+  filter(!(word1 %in% stop_words$word)) %>%
+  filter(!(word2 %in% stop_words$word)) %>%
+  unite(bigram, word1, word2, sep = " ") %>%
+  group_by(bigram, target) %>%
+  count() %>%
+  ungroup(target) %>%
+  mutate(count = sum(n)) %>%
+  ungroup() %>%
+  mutate(ratio = n/count) %>%
+  arrange(desc(count), desc(ratio))
+bigrams
+```
+
+```{r}
+top20DisasterBigrams <- bigrams %>%
+  filter(target == 1) %>%
+  arrange(desc(n)) %>%
+  select(bigram, n) %>%
+  head(20)
+
+top20DisasterBigrams %>%
+  ggplot(aes(reorder(bigram, n), n)) +
+  geom_bar(stat = "identity") + 
+  coord_flip() +
+  labs(
+    x = "Bigram",
+    y = "Count",
+    title = "Top 20 Disaster Bigrams"
+  ) + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+top20NonDisasterBigrams <- bigrams %>%
+  filter(target == 0) %>%
+  arrange(desc(n)) %>%
+  select(bigram, n) %>%
+  head(20)
+
+top20NonDisasterBigrams %>%
+  ggplot(aes(reorder(bigram, n), n)) +
+  geom_bar(stat = "identity") + 
+  coord_flip() +
+  labs(
+    x = "Bigram",
+    y = "Count",
+    title = "Top 20 Non-Disaster Bigrams"
+  ) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+#### Trigram
+
+```{r}
+trigrams <- tidy_trainset %>%
+  unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
+  filter(trigram != "NA") %>%
+  separate(trigram, c("word1", "word2", "word3"), sep = " ") %>%
+  filter(str_detect(word1, "^[a-z]+$")) %>%
+  filter(str_detect(word2, "^[a-z]+$")) %>%
+  filter(str_detect(word3, "^[a-z]+$")) %>%
+  filter(!(word1 %in% stop_words$word)) %>%
+  filter(!(word2 %in% stop_words$word)) %>%
+  filter(!(word3 %in% stop_words$word)) %>%
+  unite(trigram, word1, word2, word3, sep = " ") %>%
+  group_by(trigram, target) %>%
+  count() %>%
+  ungroup(target) %>%
+  mutate(count = sum(n)) %>%
+  mutate(ratio = n/count) %>%
+  arrange(desc(count), desc(ratio))
+trigrams
+```
+
+```{r}
+top20DisasterTrigrams <- trigrams %>%
+  filter(target == 1) %>%
+  arrange(desc(n)) %>%
+  select(trigram, n) %>%
+  head(20)
+top20DisasterTrigrams %>%
+  ggplot(aes(reorder(trigram, n), n)) +
+  geom_bar(stat = "identity") + 
+  coord_flip() +
+  labs(
+    x = "Trigram",
+    y = "Count",
+    title = "Top 20 Disaster Trigrams"
+  ) + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+top20NonDisasterTrigrams <- trigrams %>%
+  filter(target == 0) %>%
+  arrange(desc(n)) %>%
+  select(trigram, n) %>%
+  head(20)
+top20NonDisasterTrigrams %>%
+  ggplot(aes(reorder(trigram, n), n)) +
+  geom_bar(stat = "identity") + 
+  coord_flip() +
+  labs(
+    x = "Trigram",
+    y = "Count",
+    title = "Top 20 Non-Disaster Trigrams"
+  ) + 
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Sentimental Analysis
+
+#### Lexicon
 
 ```{r}
 lexicon_nrc() %>%
@@ -628,60 +905,18 @@ lexicon_nrc_eil() %>%
   filter(term == 'fire')
 ```
 
-# Random Forest Training
+# Model
 
-```{r}
-# tidy_trainset
-input <- tidy_trainset %>%
-  # mutate(
-  #   target = as.factor(target)
-  #   # hasTag = case_when(
-  #   #   is.na(tags) ~ 0,
-  #   #   T ~ 1
-  #   # ),
-  #   # hasAt = case_when(
-  #   #   is.na(at) ~ 0,
-  #   #   T ~ 1
-  #   # ),
-  #   # hasLink = case_when(
-  #   #   is.na(links) ~ 0,
-  #   #   T ~ 1
-  #   # )
-  # ) %>%
-  # select(target, hasTag, hasAt, charLengthType, wordCountType, keyword, containsDisasterWord)
-  select(target, wordCountType, containsDisasterWord, containsDisasterKeyword, containsDisasterAt)
-
-# for(i in seq(from = 10, to = 500, by = 10)){
-#   rf <- randomForest(
-#     target ~.,
-#     data = input,
-#     importance = T,
-#     ntree = i,
-#     mtry = 3
-#   )
-#   # print(rf$err.rate)
-#   cat(paste0("ntree = ", i, "; OOB = ", rf$err.rate[i, 1]), "\n")
-# }
-# rf <- randomForest(target ~., data = input, importance = T, ntree = 300)
-# rf
-# 
-valid_input <- tidy_valid %>%
-  mutate(target = as.factor(target)) %>%
-  select(target, wordCountType, containsDisasterWord, containsDisasterKeyword, containsDisasterAt)
-
-test_input <- tidy_test %>%
-  mutate(target = as.factor(target)) %>%
-  select(target, wordCountType, containsDisasterWord, containsDisasterKeyword, containsDisasterAt)
-
-p1 <- predict(rf, valid_input)
-p1 %>%
-  confusionMatrix(valid_input$target)
-```
+## Random Forest Training
 
 ```{r}
 tidy_trainset
-input <- tidy_trainset %>%
-  mutate(
+```
+
+```{r}
+processModelInput <- function(dataset){
+  dataset %>%
+    mutate(
     contains_disaster_at = as.numeric(factor(contains_disaster_at)),
     contains_disaster_word = as.numeric(factor(contains_disaster_word)),
     contains_disaster_keyword = as.numeric(factor(contains_disaster_keyword)),
@@ -702,12 +937,42 @@ input <- tidy_trainset %>%
     contains_disaster_at,
     contains_disaster_word
   )
-input
+}
+input_train <- tidy_trainset %>%
+  processModelInput()
+input_train
+
+input_valid <- tidy_valid %>%
+  processModelInput()
+input_test <- tidy_test %>%
+  processModelInput()
 ```
 
 ```{r}
-library(neuralnet)
+rf <- randomForest(
+  as.factor(target) ~.,
+  data = input,
+  importance = T,
+  ntree = 1000
+  # mtry = 3
+)
+rf
+  # print(rf$err.rate)
+#   cat(paste0("ntree = ", i, "; OOB = ", rf$err.rate[i, 1]), "\n")
+# }
+```
 
+```{r}
+p1 <- predict(rf, input_valid)
+p1 %>%
+  confusionMatrix(as.factor(input_valid$target))
+```
+
+## Neural Network Training
+
+```{r}
+library(neuralnet)
+set.seed(1234)
 network <- neuralnet(
     target ~
       tag_count +
@@ -718,51 +983,43 @@ network <- neuralnet(
       mean_word_length +
       unique_word_count +
       punc_count +
-      stop_word_count
+      stop_word_count +
+      contains_disaster_keyword +
+      contains_disaster_at +
+      contains_disaster_word
     ,
     data = input,
-    rep = 2,
-    hidden = 3,
-    threshold = 0.1,
+    rep = 1,
+    hidden = 5,
+    threshold = 0.03,
     linear.output = F,
     lifesign = "full",
+    lifesign.step = 5000,
     act.fct = 'logistic',
     err.fct = 'ce',
-    # stepmax = 1000000,
+    stepmax = 1000000,
     likelihood = T
   )
-network$result.matrix
-plot(network)
-```
-
-```{r}
 network$result.matrix[1,]
 plot(network, rep = "best")
 ```
 
 ```{r}
-input <- tidy_valid %>%
-  mutate(
-    containsDisasterAt = as.numeric(factor(containsDisasterAt)),
-    containsDisasterWord = as.numeric(factor(containsDisasterWord)),
-    containsDisasterKeyword = as.numeric(factor(containsDisasterKeyword)),
-    wordCountType = as.numeric(factor(wordCountType))
-  ) %>%
-  select(target, charLength, wordCount)
-```
-
-```{r}
-network.results <- compute(network, input, rep = which.min(network$result.matrix[1, ]))
-results <- data.frame(actual = input$target, prediction = network.results$net.result)
+network.results <- compute(network, input_valid, rep = which.min(network$result.matrix[1, ]))
+results <- data.frame(actual = input_valid$target, prediction = round(network.results$net.result))
 results
+t <- table(results$actual, results$prediction)
+t
+prop.table(t)
+sum(diag(t))/sum(t)
 # pred.prob <- predict(network, input)
 # pred.class <- ifelse(pred.prob > 0.5, 1, 0)
 # pred.prob
-pred.class <- sapply(results, round, digits=0) %>% as_tibble
-pred.class
-t <- table(pred.class$actual, input$target)
-t
-sum(diag(t))/sum(t)
+# pred.class <- sapply(results, round, digits=0) %>% as_tibble()
+# pred.class
+# t <- table(pred.class$actual, input_valid$target)
+# t
+# sum(diag(t))/sum(t)
 
 ```
 
