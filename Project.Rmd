@@ -393,7 +393,7 @@ USAstate
 
 ## Feature Engineering
 
-### Compute the length of each *text* variable
+### Extract *char length*, *word count*, *mean word count*, *unique word count*, *punctuation count*, *stop words count*
 
 ```{r}
 extract_char_length <- function(dataset){
@@ -417,7 +417,7 @@ extract_unique_word_count <- function(dataset){
       )
     )
 }
-extract_puncuation_count <- function(dataset){
+extract_punctuation_count <- function(dataset){
   dataset %>%
     mutate(
       punc_count = str_count(text, "[[:punct:]]+")
@@ -469,7 +469,7 @@ tidy_trainset <- tidy_trainset %>%
   extract_word_count() %>%
   extract_mean_word_length() %>%
   extract_unique_word_count() %>%
-  extract_puncuation_count() %>%
+  extract_punctuation_count() %>%
   extract_stop_word_count()
 
 tidy_valid <- tidy_valid %>%
@@ -477,7 +477,7 @@ tidy_valid <- tidy_valid %>%
   extract_word_count() %>%
   extract_mean_word_length() %>%
   extract_unique_word_count() %>%
-  extract_puncuation_count() %>%
+  extract_punctuation_count() %>%
   extract_stop_word_count()
 
 tidy_test <- tidy_test %>%
@@ -485,7 +485,7 @@ tidy_test <- tidy_test %>%
   extract_word_count() %>%
   extract_mean_word_length() %>%
   extract_unique_word_count() %>%
-  extract_puncuation_count() %>%
+  extract_punctuation_count() %>%
   extract_stop_word_count()
 
 tidy_trainset <- tidy_trainset %>%
@@ -536,7 +536,9 @@ tidy_trainset %>%
 tidy_trainset
 ```
 
-### Ratio of each keyword vs target
+### Keyword
+
+#### Ratio of each keyword vs target
 
 ```{r}
 keyword_ratio <- tidy_trainset %>%
@@ -548,7 +550,7 @@ keyword_ratio <- tidy_trainset %>%
 keyword_ratio
 ```
 
-### Create disaster keyword
+#### Create disaster keyword
 
 ```{r}
 count_threshold <- 20
@@ -590,10 +592,12 @@ tidy_test <- checkDisasterKeyword(tidy_test, disaster_keywords)
 tidy_trainset
 ```
 
-### Ratio of each tags vs target
+### Tag
+
+#### Ratio of each tags vs target
 
 ```{r}
-tidy_trainset %>%
+tag_ratio <- tidy_trainset %>%
   filter(!is.na(tags)) %>%
   separate_rows(tags, sep = ',') %>%
   group_by(tags, target) %>%
@@ -601,9 +605,55 @@ tidy_trainset %>%
   mutate(ratio = n / sum(n)) %>%
   ungroup() %>%
   arrange(desc(n), desc(ratio), tags)
+tag_ratio
 ```
 
-### Ratio of each at vs target
+```{r}
+str <- "tags"
+str_detect(str, str_replace_all("^(???|tag)$", '\\?', '\\\\?'))
+```
+
+#### Create disaster tag
+
+```{r}
+count_threshold <- 5
+ratio_threshold <- 0.7
+disaster_tag <- tag_ratio %>%
+  filter(target == 1 & ratio >= ratio_threshold & n >= count_threshold) %>%
+  .$tags
+
+checkDisasterTag <- function(dataset, disaster_tag){
+  dataset %>%
+    mutate(
+      contains_disaster_tag = str_detect(
+        tags,
+        paste(
+          "^(",
+          str_replace_all(
+            paste(disaster_tag, collapse = "|"),
+            '\\?',
+            '\\\\?'
+          ),
+          ")$",
+          sep = ""
+        )
+      )
+    ) %>% 
+    mutate(contains_disaster_tag = case_when(
+      contains_disaster_tag == T ~ "True",
+      contains_disaster_tag == F ~ "False",
+      T ~ "Empty"
+    ))
+}
+tidy_trainset <- checkDisasterTag(tidy_trainset, disaster_tag)
+tidy_valid <- checkDisasterTag(tidy_valid, disaster_tag)
+tidy_test <- checkDisasterTag(tidy_test, disaster_tag)
+tidy_trainset
+```
+
+### At
+
+#### Ratio of each at vs target
 
 ```{r}
 at_ratio <- tidy_trainset %>%
@@ -616,7 +666,7 @@ at_ratio <- tidy_trainset %>%
 at_ratio
 ```
 
-### Create disaster at
+#### Create disaster at
 
 ```{r}
 count_threshold <- 5
@@ -920,6 +970,7 @@ processModelInput <- function(dataset){
     contains_disaster_at = as.numeric(factor(contains_disaster_at)),
     contains_disaster_word = as.numeric(factor(contains_disaster_word)),
     contains_disaster_keyword = as.numeric(factor(contains_disaster_keyword)),
+    contains_disaster_tag = as.numeric(factor(contains_disaster_tag)),
     word_count_type = as.numeric(factor(word_count_type))
   ) %>%
   select(
@@ -935,7 +986,8 @@ processModelInput <- function(dataset){
     stop_word_count,
     contains_disaster_keyword,
     contains_disaster_at,
-    contains_disaster_word
+    contains_disaster_word,
+    contains_disaster_tag
   )
 }
 input_train <- tidy_trainset %>%
@@ -986,9 +1038,10 @@ network <- neuralnet(
       stop_word_count +
       contains_disaster_keyword +
       contains_disaster_at +
-      contains_disaster_word
+      contains_disaster_word +
+      contains_disaster_tag
     ,
-    data = input,
+    data = input_train,
     rep = 1,
     hidden = 5,
     threshold = 0.03,
