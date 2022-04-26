@@ -21,7 +21,6 @@ library(rvest)
 library(httr)
 library(curl)
 library(jsonlite)
-library(randomForest)
 library(caret)
 library(gridExtra)
 library(scales)
@@ -708,7 +707,9 @@ tidy_test <- checkDisasterAt(tidy_test, disaster_at)
 tidy_trainset
 ```
 
-### Ratio of each word in text vs target
+### Text
+
+#### Ratio of each word in text vs target
 
 ```{r}
 word_ratio <- tidy_trainset %>%
@@ -727,7 +728,21 @@ word_ratio <- tidy_trainset %>%
 word_ratio
 ```
 
-### Create disaster words
+#### Create disaster words
+
+```{r}
+str <- "Our Deeds are the Reason of this earthquake May ALLAH Forgive us all" %>%
+  tolower()
+str_detect(
+  str,
+  paste(
+    "^(",
+    paste(disaster_words, collapse = "|"),
+    ")$",
+    sep = ""
+  )
+)
+```
 
 ```{r}
 # excluded_words <- c(
@@ -746,7 +761,7 @@ word_ratio
 count_threshold <- 25
 ratio_threshold <- 0.65
 disaster_words <- word_ratio %>%
-  filter(target == 1 & ratio >= ratio_threshold & n >= count_threshold & !(word %in% excluded_words)) %>%
+  filter(target == 1 & ratio >= ratio_threshold & n >= count_threshold) %>%
   .$word
 
 checkDisasterWord <- function(dataset, disaster_words){
@@ -754,7 +769,12 @@ checkDisasterWord <- function(dataset, disaster_words){
     mutate(
       contains_disaster_word = str_detect(
         text,
-        paste(disaster_words, collapse = "|")
+        paste(
+          # "^(",
+          paste(disaster_words, collapse = "|"),
+          # ")$",
+          sep = ""
+        )
       )
     )
 }
@@ -773,9 +793,9 @@ tidy_test <- checkDisasterWord(tidy_test, disaster_words)
 tidy_trainset
 ```
 
-### N-gram analysis
+#### N-gram analysis
 
-#### Unigram
+##### Unigram
 
 ```{r}
 unigrams <- tidy_trainset %>%
@@ -794,13 +814,20 @@ unigrams
 ```
 
 ```{r}
-top20DisasterUnigrams <- unigrams %>%
-  filter(target == 1) %>%
+count_threshold <- 25
+ratio_threshold <- 0.65
+disasterUnigrams <- unigrams %>%
+  filter(target == 1 & n >= count_threshold & ratio >= ratio_threshold) %>%
   arrange(desc(n)) %>%
-  select(unigram, n) %>%
-  head(20)
+  select(unigram, n)
 
-top20DisasterUnigrams %>%
+nonDisasterUnigrams <- unigrams %>%
+  filter(target == 0 & n >= count_threshold & ratio >= ratio_threshold) %>%
+  arrange(desc(n)) %>%
+  select(unigram, n)
+
+top20DisasterUnigrams_plot <- disasterUnigrams %>%
+  head(20) %>%
   ggplot(aes(reorder(unigram, n), n)) +
   geom_bar(stat = "identity") + 
   coord_flip() +
@@ -811,13 +838,8 @@ top20DisasterUnigrams %>%
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
 
-top20NonDisasterUnigrams <- unigrams %>%
-  filter(target == 0) %>%
-  arrange(desc(n)) %>%
-  select(unigram, n) %>%
-  head(20)
-
-top20NonDisasterUnigrams %>%
+top20NonDisasterUnigrams_plot <- nonDisasterUnigrams %>%
+  head(20) %>%
   ggplot(aes(reorder(unigram, n), n)) +
   geom_bar(stat = "identity") + 
   coord_flip() +
@@ -827,9 +849,17 @@ top20NonDisasterUnigrams %>%
     title = "Top 20 Non-Disaster Unigrams"
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(top20DisasterUnigrams_plot, top20NonDisasterUnigrams_plot, nrow = 1)
 ```
 
-#### Bigram
+```{r}
+checkDisasterUnigram <- function(dataset){
+  
+}
+```
+
+##### Bigram
 
 ```{r}
 bigrams <- tidy_trainset %>%
@@ -852,13 +882,15 @@ bigrams
 ```
 
 ```{r}
-top20DisasterBigrams <- bigrams %>%
-  filter(target == 1) %>%
+count_threshold <- 10
+ratio_threshold <- 0.65
+disasterBigrams <- bigrams %>%
+  filter(target == 1 & n >= count_threshold & ratio >= ratio_threshold) %>%
   arrange(desc(n)) %>%
-  select(bigram, n) %>%
-  head(20)
+  select(bigram, n)
 
-top20DisasterBigrams %>%
+top20DisasterBigrams_plot <- disasterBigrams %>%
+  head(20) %>%
   ggplot(aes(reorder(bigram, n), n)) +
   geom_bar(stat = "identity") + 
   coord_flip() +
@@ -869,13 +901,13 @@ top20DisasterBigrams %>%
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
 
-top20NonDisasterBigrams <- bigrams %>%
-  filter(target == 0) %>%
+nonDisasterBigrams <- bigrams %>%
+  filter(target == 0 & n >= count_threshold & ratio >= ratio_threshold) %>%
   arrange(desc(n)) %>%
-  select(bigram, n) %>%
-  head(20)
+  select(bigram, n)
 
-top20NonDisasterBigrams %>%
+top20NonDisasterBigrams_plot <- nonDisasterBigrams %>%
+  head(20) %>%
   ggplot(aes(reorder(bigram, n), n)) +
   geom_bar(stat = "identity") + 
   coord_flip() +
@@ -885,9 +917,11 @@ top20NonDisasterBigrams %>%
     title = "Top 20 Non-Disaster Bigrams"
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(top20DisasterBigrams_plot, top20NonDisasterBigrams_plot, nrow = 1)
 ```
 
-#### Trigram
+##### Trigram
 
 ```{r}
 trigrams <- tidy_trainset %>%
@@ -911,12 +945,14 @@ trigrams
 ```
 
 ```{r}
-top20DisasterTrigrams <- trigrams %>%
-  filter(target == 1) %>%
+count_threshold <- 10
+ratio_threshold <- 0.65
+disasterTrigrams <- trigrams %>%
+  filter(target == 1 & n >= count_threshold & ratio >= ratio_threshold) %>%
   arrange(desc(n)) %>%
-  select(trigram, n) %>%
-  head(20)
-top20DisasterTrigrams %>%
+  select(trigram, n)
+
+top20DisasterTrigrams_plot <- disasterTrigrams %>%
   ggplot(aes(reorder(trigram, n), n)) +
   geom_bar(stat = "identity") + 
   coord_flip() +
@@ -927,12 +963,12 @@ top20DisasterTrigrams %>%
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
 
-top20NonDisasterTrigrams <- trigrams %>%
-  filter(target == 0) %>%
+nonDisasterTrigrams <- trigrams %>%
+  filter(target == 0 & n >= count_threshold & ratio >= ratio_threshold) %>%
   arrange(desc(n)) %>%
-  select(trigram, n) %>%
-  head(20)
-top20NonDisasterTrigrams %>%
+  select(trigram, n)
+
+top20NonDisasterTrigrams_plot <- nonDisasterTrigrams %>%
   ggplot(aes(reorder(trigram, n), n)) +
   geom_bar(stat = "identity") + 
   coord_flip() +
@@ -942,6 +978,8 @@ top20NonDisasterTrigrams %>%
     title = "Top 20 Non-Disaster Trigrams"
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(top20DisasterTrigrams_plot, top20NonDisasterTrigrams_plot, nrow = 1)
 ```
 
 ### Sentimental Analysis
@@ -958,6 +996,12 @@ lexicon_nrc_eil() %>%
 # Model
 
 ## Random Forest Training
+
+### Boosting
+
+```{r}
+library(gbm)
+```
 
 ```{r}
 tidy_trainset
@@ -1001,22 +1045,46 @@ input_test <- tidy_test %>%
 ```
 
 ```{r}
-rf <- randomForest(
-  as.factor(target) ~.,
-  data = input,
-  importance = T,
-  ntree = 1000
-  # mtry = 3
+boosting <- gbm(
+  as.character(target) ~.,
+  data = input_train,,
+  n.trees = 5000,
+  distribution = "adaboost",
+  interaction.depth = 3,
+  shrinkage = 0.2
 )
-rf
-  # print(rf$err.rate)
-#   cat(paste0("ntree = ", i, "; OOB = ", rf$err.rate[i, 1]), "\n")
-# }
+boosting
 ```
 
 ```{r}
-p1 <- predict(rf, input_valid)
+predict.result <- predict(boosting, input_valid, n.trees = 325, type = 'response')
+predict.result[predict.result > 0.5] = 1
+predict.result[predict.result <= 0.5] = 0
+predict.result %>%
+  as.factor() %>%
+  confusionMatrix(as.factor(input_valid$target))
+```
+
+### Bagging
+
+```{r}
+library(randomForest)
+```
+
+```{r}
+bagging <- randomForest(
+  as.factor(target) ~.,
+  data = input_train,
+  importance = T,
+  ntree = 2000
+)
+bagging
+```
+
+```{r}
+p1 <- predict(bagging, input_valid)
 p1 %>%
+  as.factor() %>%
   confusionMatrix(as.factor(input_valid$target))
 ```
 
@@ -1024,7 +1092,7 @@ p1 %>%
 
 ```{r}
 library(neuralnet)
-set.seed(1234)
+set.seed(25)
 network <- neuralnet(
     target ~
       tag_count +
@@ -1065,15 +1133,6 @@ t <- table(results$actual, results$prediction)
 t
 prop.table(t)
 sum(diag(t))/sum(t)
-# pred.prob <- predict(network, input)
-# pred.class <- ifelse(pred.prob > 0.5, 1, 0)
-# pred.prob
-# pred.class <- sapply(results, round, digits=0) %>% as_tibble()
-# pred.class
-# t <- table(pred.class$actual, input_valid$target)
-# t
-# sum(diag(t))/sum(t)
-
 ```
 
 # Twitter API
@@ -1081,4 +1140,17 @@ sum(diag(t))/sum(t)
 ```{r}
 twitter <- fromJSON("./Config/twitter.json")
 twitterAPIHeader <- c('Authorization' = sprintf(""))
+```
+
+```{r}
+# library(twitteR)
+library("openssl")
+library("httpuv")
+library("twitteR")
+library("base64enc")
+consumer_key <- '71wsCJB9j7ex7zGZHG88I5ddj'
+consumer_secret <- 'wgSSKW5fodla6LevWjBuNfcg0oVRD35OWYBYyoXv9woUkNidTO'
+access_token <- '1514083978935869440-UETMAbppFKpzNX9wklb7rbfPf5DCpB'
+access_secret <- 'FCCMkweOJprJkYmPuOJARiLRTo2nQsmiLcM3YKrs1376w'
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
 ```
