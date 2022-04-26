@@ -615,6 +615,12 @@ str_detect(str, str_replace_all("^(???|tag)$", '\\?', '\\\\?'))
 #### Create disaster tag
 
 ```{r}
+tidy_trainset %>%
+  select(tags, contains_disaster_tag)
+disaster_tag
+```
+
+```{r}
 count_threshold <- 5
 ratio_threshold <- 0.7
 disaster_tag <- tag_ratio %>%
@@ -1140,17 +1146,4 @@ sum(diag(t))/sum(t)
 ```{r}
 twitter <- fromJSON("./Config/twitter.json")
 twitterAPIHeader <- c('Authorization' = sprintf(""))
-```
-
-```{r}
-# library(twitteR)
-library("openssl")
-library("httpuv")
-library("twitteR")
-library("base64enc")
-consumer_key <- '71wsCJB9j7ex7zGZHG88I5ddj'
-consumer_secret <- 'wgSSKW5fodla6LevWjBuNfcg0oVRD35OWYBYyoXv9woUkNidTO'
-access_token <- '1514083978935869440-UETMAbppFKpzNX9wklb7rbfPf5DCpB'
-access_secret <- 'FCCMkweOJprJkYmPuOJARiLRTo2nQsmiLcM3YKrs1376w'
-setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
 ```
