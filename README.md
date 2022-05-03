@@ -76,6 +76,8 @@ Feiyu Zheng - [feiyuzheng98@gmail.com](mailto:feiyuzheng98@gmail.com)
 
 Junyi Li - [jl2707@scarletmail.rutgers.edu](mailto:jl2707@scarletmail.rutgers.edu)
 
+Ziyu Zhou - [zz544@scarletmail.rutgers.edu](mailto:zz544@scarletmail.rutgers.edu)
+
 Project Link: [https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets](https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets)
 
 <p align="right">(<a href="#top">back to top</a>)</p>
