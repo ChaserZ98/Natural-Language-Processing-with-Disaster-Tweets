@@ -42,6 +42,6 @@ vignettes/*.pdf
 *.DS_Store
 
 # Project Ignored Files
-Data/
+Data/Kaggle
 kaggle.json
 twitter.json

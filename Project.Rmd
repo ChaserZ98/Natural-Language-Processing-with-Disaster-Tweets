@@ -39,7 +39,7 @@ kaggle <- fromJSON("./Config/kaggle.json")
 if(!dir.exists("./Data")){
   dir.create("./Data")
 }
-if(!file.exists("./Data/train.csv")){
+if(!file.exists("./Data/Kaggle/train.csv")){
   data <- httr::GET(
     "https://www.kaggle.com/api/v1/competitions/data/download/17777/train.csv",
     httr::authenticate(
@@ -48,7 +48,7 @@ if(!file.exists("./Data/train.csv")){
       type = "basic"
     )
   )
-  download.file(data$url, "./Data/train.csv")
+  download.file(data$url, "./Data/Kaggle/train.csv")
   data <- httr::GET(
     "https://www.kaggle.com/api/v1/competitions/data/download/17777/test.csv",
     httr::authenticate(
@@ -57,10 +57,10 @@ if(!file.exists("./Data/train.csv")){
       type = "basic"
     )
   )
-  download.file(data$url, "./Data/test.csv")
+  download.file(data$url, "./Data/Kaggle/test.csv")
   download.file(
     "https://raw.githubusercontent.com/shahp7575/disaster-tweets/master/socialmedia-disaster-tweets-DFE.csv",
-    "./Data/socialmedia-disaster-tweets-DFE.csv"
+    "./Data/Kaggle/socialmedia-disaster-tweets-DFE.csv"
   )
 }
 ```
@@ -585,6 +585,13 @@ disaster_keywords <- keyword_ratio %>%
 non_disaster_keywords <- keyword_ratio %>%
   filter(n >= count_threshold & target == 0 & ratio >= ratio_threshold) %>%
   .$keyword
+disaster_keywords %>%
+  as_tibble()
+non_disaster_keywords %>%
+  as_tibble()
+```
+
+```{r}
 # checkDisasterKeyword <- function(dataset, disaster_keywords){
 #   dataset %>%
 #     mutate(
@@ -662,7 +669,13 @@ disaster_tag <- tag_ratio %>%
 non_disaster_tag <- tag_ratio %>%
   filter(target == 0 & ratio >= ratio_threshold & n >= count_threshold) %>%
   .$tags
+disaster_tag %>%
+  as_tibble()
+non_disaster_tag %>%
+  as_tibble()
+```
 
+```{r}
 # checkDisasterTag <- function(dataset, disaster_tag){
 #   dataset %>%
 #     mutate(
@@ -1364,6 +1377,10 @@ tidy_test <- tidy_test %>%
 tidy_train
 ```
 
+```{r}
+tidy_train %>% select(id, target, disaster_unigram_count, non_disaster_unigram_count, disaster_bigram_count, non_disaster_bigram_count, disaster_trigram_count, non_disaster_trigram_count) %>% glimpse()
+```
+
 ### Sentimental Analysis
 
 #### Lexicon
@@ -1593,7 +1610,7 @@ network <- neuralnet(
     data = input_train,
     rep = 1,
     hidden = 5,
-    threshold = 0.03,
+    threshold = 0.06,
     linear.output = F,
     lifesign = "full",
     lifesign.step = 5000,
@@ -1619,6 +1636,24 @@ sum(diag(t))/sum(t)
 # Twitter API
 
 ```{r}
-twitter <- fromJSON("./Config/twitter.json")
-twitterAPIHeader <- c('Authorization' = sprintf(""))
+# We downloaded a lot of data from the twitter api using postman
+data1 <- fromJSON('./Data/Twitter API Data/las.json')$data$text %>% as_tibble()
+data2 <- fromJSON('./Data/Twitter API Data/DisasterInfoPH.json')$data$text %>% as_tibble()
+data3 <- fromJSON('./Data/Twitter API Data/Disaster_Center.json')$data$text %>% as_tibble()
+data4 <- fromJSON('./Data/Twitter API Data/earthquakeBot.json')$data$text %>% as_tibble()
+data5 <- fromJSON('./Data/Twitter API Data/USGSted.json')$data$text %>% as_tibble()
+data6 <- fromJSON('./Data/Twitter API Data/_GlobalCrisis_.json')$data$text %>% as_tibble()
+data7 <- fromJSON('./Data/Twitter API Data/njdepforestfire.json')$data$text %>% as_tibble()
+data8 <- fromJSON('./Data/Twitter API Data/FFMVic.json')$data$text %>% as_tibble()
+
+disasterData <- rbind(data2, data3, data4, data5, data6, data7, data8) %>%
+  mutate(target=1)
+nonDisasterData <- data1 %>% mutate(target=0)
+twitterData <- rbind(disasterData, nonDisasterData)
+
+
+twitterData <- twitterData %>%
+  mutate(id = row_number()) %>%
+  rename(c('text' = value))
+twitterData
 ```
