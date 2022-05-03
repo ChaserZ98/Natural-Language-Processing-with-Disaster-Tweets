@@ -894,31 +894,31 @@ extract_stop_word_count <- function(dataset){
   )
 }
 
-classify_char_length <- function(dataset){
-  dataset %>%
-    mutate(
-      char_length_type = case_when(
-        char_length <= 50 ~ "short",
-        char_length <= 100 ~ "medium",
-        char_length <= 150 ~ "long",
-        T ~ "other"
-      )
-    )
-}
-classify_word_length <- function(dataset){
-  dataset %>%
-    mutate(
-      word_count_type = case_when(
-        word_count <= 5 ~ "0-5",
-        word_count <= 10 ~ "5-10",
-        word_count <= 15 ~ "10-15",
-        word_count <= 20 ~ "15-20",
-        word_count <= 25 ~ "20-25",
-        word_count <= 30 ~ "25-30",
-        T ~ "other"
-      )
-    )
-}
+# classify_char_length <- function(dataset){
+#   dataset %>%
+#     mutate(
+#       char_length_type = case_when(
+#         char_length <= 50 ~ "short",
+#         char_length <= 100 ~ "medium",
+#         char_length <= 150 ~ "long",
+#         T ~ "other"
+#       )
+#     )
+# }
+# classify_word_length <- function(dataset){
+#   dataset %>%
+#     mutate(
+#       word_count_type = case_when(
+#         word_count <= 5 ~ "0-5",
+#         word_count <= 10 ~ "5-10",
+#         word_count <= 15 ~ "10-15",
+#         word_count <= 20 ~ "15-20",
+#         word_count <= 25 ~ "20-25",
+#         word_count <= 30 ~ "25-30",
+#         T ~ "other"
+#       )
+#     )
+# }
 
 tidy_train <- tidy_train %>%
   extract_char_length() %>%
@@ -936,13 +936,13 @@ tidy_test <- tidy_test %>%
   extract_punctuation_count() %>%
   extract_stop_word_count()
 
-tidy_train <- tidy_train %>%
-  classify_char_length() %>%
-  classify_word_length()
-
-tidy_test <- tidy_test %>%
-  classify_char_length() %>%
-  classify_word_length()
+# tidy_train <- tidy_train %>%
+#   classify_char_length() %>%
+#   classify_word_length()
+# 
+# tidy_test <- tidy_test %>%
+#   classify_char_length() %>%
+#   classify_word_length()
 
 tidy_train
 ```
@@ -1369,26 +1369,43 @@ tidy_train
 #### Lexicon
 
 ```{r}
-dictionary <- read_table('./Data/SemEval2015-English-Twitter-Lexicon.txt', col_names=c('score', 'word')) %>% mutate(word=str_replace_all(word, '#', ''))
-
-dictionary1 <- read_table('./Data/NRC-Hashtag-Emotion-Lexicon-v0.2.txt', col_names = c('type', 'word', 'score')) %>%
+nrc_hashtag <- read_table(
+  './Lexicon/NRC-Hashtag-Emotion-Lexicon-v0.2/NRC-Hashtag-Emotion-Lexicon-v0.2.txt',
+  col_names = c('type', 'word', 'score')
+) %>%
   mutate(word=str_replace_all(word, '#', ''))
 
-dictionary1 <- rbind(
-  dictionary1 %>% filter(type %in% c('fear', 'anger', 'sadness', 'disgust')) %>% mutate(score = -score),
-  dictionary1 %>% filter(type %in% c('joy', 'anticipation', 'trust', 'surprise')) %>% mutate(score = score)
+nrc_hashtag <- rbind(
+  nrc_hashtag %>% filter(type %in% c('fear', 'anger', 'sadness', 'disgust')) %>% mutate(score = -score),
+  nrc_hashtag %>% filter(type %in% c('joy', 'anticipation', 'trust', 'surprise')) %>% mutate(score = score)
 )
+nrc_hashtag
+```
 
+#### Get sentimental score of each tweet
 
-data_score <- tidy_trainset %>% 
-  unnest_tokens(word,text) %>% 
-  left_join(dictionary1, by='word') %>% 
-  group_by(id) %>% 
-  summarise(score= sum(score, na.rm = T))
+```{r}
+getSentiments <- function(dataset, lexicon){
+  dataset %>%
+    unnest_tokens(word, text) %>%
+    left_join(lexicon, by='word') %>%
+    group_by(id) %>%
+    summarise(score = sum(score, na.rm = T)) %>%
+    right_join(dataset, by='id')
+}
+# data_score <- tidy_train %>% 
+#   unnest_tokens(word,text) %>% 
+#   left_join(nrc_hashtag, by='word') %>% 
+#   group_by(id) %>% 
+#   summarise(score= sum(score, na.rm = T))
 
-data_score
+# data_score
 
-tidy_trainset %>% left_join(data_score, by='id')
+tidy_train <- tidy_train %>%
+  getSentiments(nrc_hashtag)
+tidy_test <- tidy_test %>%
+  getSentiments(nrc_hashtag)
+tidy_train
 ```
 
 # Train-validation split based on target ratio
@@ -1481,7 +1498,8 @@ processModelInput <- function(dataset){
     disaster_bigram_count,
     non_disaster_bigram_count,
     disaster_trigram_count,
-    non_disaster_trigram_count
+    non_disaster_trigram_count,
+    score
   )
 }
 input_train <- tidy_train %>%
@@ -1507,7 +1525,7 @@ boosting
 ```
 
 ```{r}
-predict.result <- predict(boosting, input_valid, n.trees = 325, type = 'response')
+predict.result <- predict(boosting, input_valid, n.trees = 320, type = 'response')
 predict.result[predict.result > 0.5] = 1
 predict.result[predict.result <= 0.5] = 0
 predict.result %>%
@@ -1542,6 +1560,9 @@ p1 %>%
 
 ```{r}
 library(neuralnet)
+```
+
+```{r}
 set.seed(25)
 network <- neuralnet(
     target ~
@@ -1566,7 +1587,8 @@ network <- neuralnet(
       disaster_bigram_count +
       non_disaster_bigram_count +
       disaster_trigram_count +
-      non_disaster_trigram_count
+      non_disaster_trigram_count + 
+      score
     ,
     data = input_train,
     rep = 1,
