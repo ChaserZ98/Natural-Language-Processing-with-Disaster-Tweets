@@ -34,12 +34,15 @@ options(dplyr.summarise.inform = F)
 ## Download source data from kaggle
 
 ```{r warning=FALSE}
-kaggle <- fromJSON("./Config/kaggle.json")
+kaggle <- fromJSON("../Config/kaggle.json")
 
-if(!dir.exists("./Data")){
-  dir.create("./Data")
+if(!dir.exists("../Data")){
+  dir.create("../Data")
 }
-if(!file.exists("./Data/Kaggle/train.csv")){
+if(!dir.exists("../Data/Kaggle")){
+  dir.create("../Data/Kaggle")
+}
+if(!file.exists("../Data/Kaggle/train.csv")){
   data <- httr::GET(
     "https://www.kaggle.com/api/v1/competitions/data/download/17777/train.csv",
     httr::authenticate(
@@ -48,7 +51,7 @@ if(!file.exists("./Data/Kaggle/train.csv")){
       type = "basic"
     )
   )
-  download.file(data$url, "./Data/Kaggle/train.csv")
+  download.file(data$url, "../Data/Kaggle/train.csv")
   data <- httr::GET(
     "https://www.kaggle.com/api/v1/competitions/data/download/17777/test.csv",
     httr::authenticate(
@@ -57,10 +60,10 @@ if(!file.exists("./Data/Kaggle/train.csv")){
       type = "basic"
     )
   )
-  download.file(data$url, "./Data/Kaggle/test.csv")
+  download.file(data$url, "../Data/Kaggle/test.csv")
   download.file(
     "https://raw.githubusercontent.com/shahp7575/disaster-tweets/master/socialmedia-disaster-tweets-DFE.csv",
-    "./Data/Kaggle/socialmedia-disaster-tweets-DFE.csv"
+    "../Data/Kaggle/socialmedia-disaster-tweets-DFE.csv"
   )
 }
 ```
@@ -70,14 +73,14 @@ if(!file.exists("./Data/Kaggle/train.csv")){
 ```{r}
 encoding <- "UTF-8"
 trainset <- read.csv(
-  "./Data/train.csv",
+  "../Data/Kaggle/train.csv",
   encoding = encoding,
   header = T
 ) %>%
   as_tibble()
 
 testset <- read.csv(
-  "./Data/test.csv",
+  "../Data/Kaggle/test.csv",
   encoding = encoding,
   header = T
 ) %>%
@@ -85,7 +88,7 @@ testset <- read.csv(
 
 # add target value to testset
 test_with_target <- read.csv(
-  "./Data/socialmedia-disaster-tweets-DFE.csv",
+  "../Data/Kaggle/socialmedia-disaster-tweets-DFE.csv",
   encoding = encoding,
   header = T
 ) %>%
@@ -101,10 +104,10 @@ test_with_target %>%
     target == "Relevant" ~ as.integer(1),
     T ~ as.integer(0)
   )) %>%
-  write.csv(file = "./Data/test.csv", row.names = F)
+  write.csv(file = "../Data/Kaggle/test.csv", row.names = F)
 
 testset <- read.csv(
-  "./Data/test.csv",
+  "../Data/Kaggle/test.csv",
   encoding = encoding,
   header = T
 ) %>%
@@ -1387,7 +1390,7 @@ tidy_train %>% select(id, target, disaster_unigram_count, non_disaster_unigram_c
 
 ```{r}
 nrc_hashtag <- read_table(
-  './Lexicon/NRC-Hashtag-Emotion-Lexicon-v0.2/NRC-Hashtag-Emotion-Lexicon-v0.2.txt',
+  '../Lexicon/NRC-Hashtag-Emotion-Lexicon-v0.2/NRC-Hashtag-Emotion-Lexicon-v0.2.txt',
   col_names = c('type', 'word', 'score')
 ) %>%
   mutate(word=str_replace_all(word, '#', ''))
@@ -1637,14 +1640,14 @@ sum(diag(t))/sum(t)
 
 ```{r}
 # We downloaded a lot of data from the twitter api using postman
-data1 <- fromJSON('./Data/Twitter API Data/las.json')$data$text %>% as_tibble()
-data2 <- fromJSON('./Data/Twitter API Data/DisasterInfoPH.json')$data$text %>% as_tibble()
-data3 <- fromJSON('./Data/Twitter API Data/Disaster_Center.json')$data$text %>% as_tibble()
-data4 <- fromJSON('./Data/Twitter API Data/earthquakeBot.json')$data$text %>% as_tibble()
-data5 <- fromJSON('./Data/Twitter API Data/USGSted.json')$data$text %>% as_tibble()
-data6 <- fromJSON('./Data/Twitter API Data/_GlobalCrisis_.json')$data$text %>% as_tibble()
-data7 <- fromJSON('./Data/Twitter API Data/njdepforestfire.json')$data$text %>% as_tibble()
-data8 <- fromJSON('./Data/Twitter API Data/FFMVic.json')$data$text %>% as_tibble()
+data1 <- fromJSON('../Data/Twitter API Data/las.json')$data$text %>% as_tibble()
+data2 <- fromJSON('../Data/Twitter API Data/DisasterInfoPH.json')$data$text %>% as_tibble()
+data3 <- fromJSON('../Data/Twitter API Data/Disaster_Center.json')$data$text %>% as_tibble()
+data4 <- fromJSON('../Data/Twitter API Data/earthquakeBot.json')$data$text %>% as_tibble()
+data5 <- fromJSON('../Data/Twitter API Data/USGSted.json')$data$text %>% as_tibble()
+data6 <- fromJSON('../Data/Twitter API Data/_GlobalCrisis_.json')$data$text %>% as_tibble()
+data7 <- fromJSON('../Data/Twitter API Data/njdepforestfire.json')$data$text %>% as_tibble()
+data8 <- fromJSON('../Data/Twitter API Data/FFMVic.json')$data$text %>% as_tibble()
 
 disasterData <- rbind(data2, data3, data4, data5, data6, data7, data8) %>%
   mutate(target=1)
