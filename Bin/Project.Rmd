@@ -163,7 +163,8 @@ missingValuePlot_test <- missingValues_test %>%
   ) +
   theme(plot.title = element_text(hjust = 0.5))
 
-grid.arrange(missingValuePlot_train, missingValuePlot_test, nrow = 1)
+missingValue_plot <- grid.arrange(missingValuePlot_train, missingValuePlot_test, nrow = 1)
+ggsave(file = "../Output/Images/missing value plot.png", missingValue_plot, bg = "white")
 ```
 
 ### Target Distribution
@@ -208,7 +209,8 @@ pie_chart <- trainsetRatio %>%
     axis.text.x = element_blank()
   )
 
-grid.arrange(pie_chart, nrow = 1)
+targetDistribution_plot <- grid.arrange(pie_chart, nrow = 1)
+ggsave(file = "../Output/Images/target distribution plot.png", targetDistribution_plot, bg = "white")
 ```
 
 ## Data Cleaning
@@ -280,7 +282,7 @@ extract_links <- function(dataset){
     mutate(
       links = map_chr(
         map(
-          .x = str_extract_all(tolower(.$text), 'http\\S+\\.\\S+/\\S\\s*'),
+          .x = str_extract_all(.$text, 'http\\S+\\.\\S+/\\S\\s*'),
           unlist
         ),
         ~case_when(
@@ -288,7 +290,7 @@ extract_links <- function(dataset){
           T ~ paste(.x, collapse = ',')
         )
       ),
-      link_count = str_count(tolower(.$text), 'http\\S+\\.\\S+/\\S\\s*'),
+      link_count = str_count(.$text, 'http\\S+\\.\\S+/\\S\\s*'),
       text = str_replace_all(
         text,
         "http\\S+//\\S+\\.?\\S+\\S\\s*",
@@ -388,7 +390,7 @@ tidy_test <- tidy_test %>%
 
 ### Parse *location* variable -- Situations in American
 
-```{r}
+```{r warning=FALSE}
 withLocation <- tidy_train %>%
   mutate(location = str_replace_all(location, regex("[^, [:alpha:]]+"), "")) %>%
   mutate(location = str_replace_all(location, regex("( )*,( )*"), ", ")) %>%
@@ -429,8 +431,10 @@ inUSA <- inUSA %>% add_row(region='district of columbia', n=0, .before = 9) %>% 
 
 library(choroplethr)
 library(choroplethrMaps)
-state_choropleth(title = "USA Disaster Map", inUSA) +
+disasterMap <- state_choropleth(title = "USA Disaster Map", inUSA) +
   theme(plot.title = element_text(hjust = 0.5))
+disasterMap
+ggsave("../Output/Images/disaster map.png", disasterMap, bg = "white")
 ```
 
 ## Topic Modeling with LDA
@@ -470,7 +474,7 @@ library(topicmodels)
 library(textmineR)
 ```
 
-```{r}
+```{r warning=FALSE}
 dtm <- CreateDtm(
   tokens$text,
   doc_names = tokens$ID,
@@ -483,8 +487,14 @@ rownames(original_tf) <- 1:nrow(original_tf)
 # Eliminate words appearing less than 2 times or in more than half of the documents
 vocabulary <- tf$term[ tf$term_freq > 1 & tf$doc_freq < nrow(dtm) / 2 ]
 k_list <- seq(1, 20, by = 1)
-model_dir <- paste0("models_", digest::digest(vocabulary, algo = "sha1"))
-if (!dir.exists(model_dir)) dir.create(model_dir)
+lda_dir <- "../Output/LDA"
+model_dir <- paste0(lda_dir,"/models_", digest::digest(vocabulary, algo = "sha1"))
+if(!dir.exists(lda_dir)){
+  dir.create(lda_dir)
+}
+if (!dir.exists(model_dir)){
+  dir.create(model_dir)
+}
 model_list <- TmParallelApply(X = k_list, FUN = function(k){
   filename = file.path(model_dir, paste0(k, "_topics.rda"))
   
@@ -493,71 +503,97 @@ model_list <- TmParallelApply(X = k_list, FUN = function(k){
     m$k <- k
     m$coherence <- CalcProbCoherence(phi = m$phi, dtm = dtm, M = 5)
     save(m, file = filename)
-  } else {
+  }
+  else {
     load(filename)
   }
   
   m
 }, export=c("dtm", "model_dir")) 
 
-coherence_mat <- data.frame(k = sapply(model_list, function(x) nrow(x$phi)), 
-                            coherence = sapply(model_list, function(x) mean(x$coherence)), 
-                            stringsAsFactors = FALSE)
-ggplot(coherence_mat, aes(x = k, y = coherence)) +
+coherence_mat <- data.frame(
+  k = sapply(model_list, function(x) nrow(x$phi)),
+  coherence = sapply(model_list, function(x) mean(x$coherence)),
+  stringsAsFactors = FALSE
+)
+
+coherence_plot <- coherence_mat %>%
+ggplot(aes(x = k, y = coherence)) +
   geom_point() +
-  geom_line(group = 1)+
-  ggtitle("Best Topic by Coherence Score") + theme_minimal() +
-  scale_x_continuous(breaks = seq(1,20,1)) + ylab("Coherence")
+  geom_line(group = 1) +
+  labs(
+    title = "Best Topic by Coherence Score",
+    y = "Coherence",
+    x = "K Value"
+  ) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_x_continuous(breaks = seq(1,20,1))
+coherence_plot
+ggsave(file = "../Output/Images/coherence plot.png", coherence_plot, bg = "white")
 ```
 
 ### Topics
 
+ggsave(file = "../Output/Images/topic plot.png", topic_plot, bg = "white", dpi = 500)
+
 ```{r}
-tweets_lda <- LDA(dtm, k = 14, method="Gibbs") # This might take a while
+tweets_lda <- LDA(dtm, k = 20, method="Gibbs") # This might take a while
 tweets_topics <- tidy(tweets_lda, matrix = "beta")
-tweets_topics
 
 tweets_top_terms <- tweets_topics %>%
   group_by(topic) %>%
   slice_max(beta, n = 10) %>% 
   ungroup() %>%
   arrange(topic, -beta)
-tweets_top_terms %>%
+topic_plot <- tweets_top_terms %>%
   mutate(term = reorder_within(term, beta, topic)) %>%
   ggplot(aes(beta, term, fill = factor(topic))) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~ topic, scales = "free") +
   scale_y_reordered()
+topic_plot
+ggsave(file = "../Output/Images/topic plot.png", topic_plot, bg = "white", width = 14, height = 6)
 ```
 
 ## Word Cloud
 
 ```{r}
 library(wordcloud2)
+library(htmlwidgets)
+library(webshot)
+webshot::install_phantomjs()
 ```
 
 ### All words
 
 ```{r}
 set.seed(1234)
-text_cleaning_tokens %>%
+wordcloud_all <- text_cleaning_tokens %>%
   filter(word != '') %>%
   anti_join(stop_words, copy = T) %>%
   count(word, sort=TRUE) %>%
   filter(n >= 20) %>%
   wordcloud2(size = 0.5)
+wordcloud_all
+
+saveWidget(wordcloud_all, "../Output/Images/wordcloud all.html", selfcontained = F)
+webshot("../Output/Images/wordcloud all.html", "../Output/Images/wordcloud all.png", delay = 5, vwidth = 600, vheight = 480)
 ```
 
 ### Disaster word cloud
 
 ```{r}
-text_cleaning_tokens %>%
+wordcloud_disaster <- text_cleaning_tokens %>%
   filter(word != '') %>%
   anti_join(stop_words, copy = T) %>%
   filter(target == 1) %>%
   count(word, sort=TRUE) %>%
   filter(n >= 20) %>%
   wordcloud2(size = 0.5)
+wordcloud_disaster
+
+saveWidget(wordcloud_disaster, "../Output/Images/wordcloud disaster.html", selfcontained = F)
+webshot("../Output/Images/wordcloud disaster.html", "../Output/Images/wordcloud disaster.png", delay = 5, vwidth = 600, vheight = 480)
 ```
 
 ## Feature Engineering
@@ -595,20 +631,6 @@ non_disaster_keywords %>%
 ```
 
 ```{r}
-# checkDisasterKeyword <- function(dataset, disaster_keywords){
-#   dataset %>%
-#     mutate(
-#       contains_disaster_keyword = str_detect(
-#         keyword,
-#         paste(disaster_keywords, collapse = "|")
-#       )
-#     ) %>%
-#     mutate(contains_disaster_keyword = case_when(
-#       contains_disaster_keyword == T ~ "True",
-#       contains_disaster_keyword == F ~ "False",
-#       T ~ "Empty"
-#     ))
-# }
 checkDisasterKeyword <- function(dataset, disaster_keywords){
   dataset %>%
     mutate(
@@ -679,29 +701,6 @@ non_disaster_tag %>%
 ```
 
 ```{r}
-# checkDisasterTag <- function(dataset, disaster_tag){
-#   dataset %>%
-#     mutate(
-#       contains_disaster_tag = str_detect(
-#         tags,
-#         paste(
-#           "^(",
-#           str_replace_all(
-#             paste(disaster_tag, collapse = "|"),
-#             '\\?',
-#             '\\\\?'
-#           ),
-#           ")$",
-#           sep = ""
-#         )
-#       )
-#     ) %>% 
-#     mutate(contains_disaster_tag = case_when(
-#       contains_disaster_tag == T ~ "True",
-#       contains_disaster_tag == F ~ "False",
-#       T ~ "Empty"
-#     ))
-# }
 countDisasterTag <- function(dataset, disaaster_tag){
    dataset %>%
     mutate(
@@ -787,21 +786,6 @@ disaster_at <- at_ratio %>%
 non_disaster_at <- at_ratio %>%
   filter(target == 0 & ratio >= ratio_threshold & n >= count_threshold) %>%
   .$at
-
-# checkDisasterAt <- function(dataset, disaster_at){
-#   dataset %>%
-#     mutate(
-#       contains_disaster_at = str_detect(
-#         at,
-#         paste(disaster_at, collapse = "|")
-#       )
-#     ) %>% 
-#     mutate(contains_disaster_at = case_when(
-#       contains_disaster_at == T ~ "True",
-#       contains_disaster_at == F ~ "False",
-#       T ~ "Empty"
-#     ))
-# }
 
 countDisasterAt <- function(dataset, disaster_at){
   dataset %>%
@@ -1037,7 +1021,7 @@ stop_word_count_distribution <- tidy_train %>%
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
 
-grid.arrange(
+distribution_plot <- grid.arrange(
   char_length_distribution,
   word_count_distribution,
   mean_word_length_distribution,
@@ -1046,6 +1030,7 @@ grid.arrange(
   stop_word_count_distribution,
   ncol = 2
 )
+ggsave(file = "../Output/Images/distribution plot.png", distribution_plot, bg = "white")
 ```
 
 #### N-gram analysis
@@ -1107,7 +1092,8 @@ top20NonDisasterUnigrams_plot <- non_disaster_unigrams %>%
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
 
-grid.arrange(top20DisasterUnigrams_plot, top20NonDisasterUnigrams_plot, nrow = 1)
+top20Unigrams_plot <- grid.arrange(top20DisasterUnigrams_plot, top20NonDisasterUnigrams_plot, nrow = 1)
+ggsave(file = "../Output/Images/top20Unigram plot.png", top20Unigrams_plot, bg = "white")
 ```
 
 ```{r}
@@ -1218,7 +1204,8 @@ top20NonDisasterBigrams_plot <- non_disaster_bigrams %>%
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
 
-grid.arrange(top20DisasterBigrams_plot, top20NonDisasterBigrams_plot, nrow = 1)
+top20Bigram_plot <- grid.arrange(top20DisasterBigrams_plot, top20NonDisasterBigrams_plot, nrow = 1)
+ggsave(file = "../Output/Images/top20Bigram plot.png", top20Bigram_plot, bg = "white")
 ```
 
 ```{r}
@@ -1330,7 +1317,8 @@ top20NonDisasterTrigrams_plot <- non_disaster_trigrams %>%
   ) + 
   theme(plot.title = element_text(hjust = 0.5))
 
-grid.arrange(top20DisasterTrigrams_plot, top20NonDisasterTrigrams_plot, nrow = 1)
+top20Trigram_plot <- grid.arrange(top20DisasterTrigrams_plot, top20NonDisasterTrigrams_plot, nrow = 1)
+ggsave(file = "../Output/Images/top20Trigram plot.png", top20Trigram_plot, bg = "white")
 ```
 
 ```{r}
@@ -1380,17 +1368,13 @@ tidy_test <- tidy_test %>%
 tidy_train
 ```
 
-```{r}
-tidy_train %>% select(id, target, disaster_unigram_count, non_disaster_unigram_count, disaster_bigram_count, non_disaster_bigram_count, disaster_trigram_count, non_disaster_trigram_count) %>% glimpse()
-```
-
 ### Sentimental Analysis
 
 #### Lexicon
 
 ```{r}
 nrc_hashtag <- read_table(
-  '../Lexicon/NRC-Hashtag-Emotion-Lexicon-v0.2/NRC-Hashtag-Emotion-Lexicon-v0.2.txt',
+  '../Lexicon/NRC-Hashtag-Emotion-Lexicon-v0.2.txt',
   col_names = c('type', 'word', 'score')
 ) %>%
   mutate(word=str_replace_all(word, '#', ''))
@@ -1413,13 +1397,6 @@ getSentiments <- function(dataset, lexicon){
     summarise(score = sum(score, na.rm = T)) %>%
     right_join(dataset, by='id')
 }
-# data_score <- tidy_train %>% 
-#   unnest_tokens(word,text) %>% 
-#   left_join(nrc_hashtag, by='word') %>% 
-#   group_by(id) %>% 
-#   summarise(score= sum(score, na.rm = T))
-
-# data_score
 
 tidy_train <- tidy_train %>%
   getSentiments(nrc_hashtag)
@@ -1488,13 +1465,6 @@ tidy_train
 ```{r}
 processModelInput <- function(dataset){
   dataset %>%
-  #   mutate(
-  #   contains_disaster_at = as.numeric(factor(contains_disaster_at)),
-  #   contains_disaster_word = as.numeric(factor(contains_disaster_word)),
-  #   contains_disaster_keyword = as.numeric(factor(contains_disaster_keyword)),
-  #   contains_disaster_tag = as.numeric(factor(contains_disaster_tag)),
-  #   word_count_type = as.numeric(factor(word_count_type))
-  # ) %>%
   select(
     target,
     link_count,

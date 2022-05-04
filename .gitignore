@@ -45,3 +45,4 @@ vignettes/*.pdf
 Data/Kaggle
 kaggle.json
 twitter.json
+*.zip
