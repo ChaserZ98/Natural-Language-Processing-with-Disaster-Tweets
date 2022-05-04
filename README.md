@@ -29,10 +29,11 @@
       <a href="#about-the-project">About The Project</a>
       <ul>
         <li><a href="#built-with">Built With</a></li>
+        <li><a href="#purpose">Purpose</a></li>
       </ul>
     </li>
-    <li><a href="#data-source">Data Source</a></li>
-    <li><a href="#competition-description">Competition Description</a></li>
+    <li><a href="#project-structure">Project Structure</a></li>
+    <li><a href="#project-overview">Project Overview</a></li>
     <li><a href="#contact">Contact</a></li>
   </ol>
 </details>
@@ -43,32 +44,66 @@ This is a course project of Rutgers MSDS597 Data Wrangling and Husbandry.
 
 ### Built with
 
-* Language: ![R](https://img.shields.io/badge/r-%23276DC3.svg?style=for-the-badge&logo=r&logoColor=white)
+* Language:
+  ![R](https://img.shields.io/badge/r-%23276DC3.svg?style=for-the-badge&logo=r&logoColor=white)
 
 * Data Source: ![Kaggle](https://img.shields.io/badge/Kaggle-20BEFF?style=for-the-badge&logo=Kaggle&logoColor=white)
+  
+  [Natural Language Processing with Disaster Tweets](https://www.kaggle.com/competitions/nlp-getting-started)
 
-* R Packages: ![tidyverse version](https://img.shields.io/badge/tidyverse-1.3.1-brightgreen)
-![dplyr version](https://img.shields.io/badge/dplyr-1.0.7-brightgreen)
-![ggplot2 version](https://img.shields.io/badge/ggplot2-3.3.5-brightgreen)
+* R Packages:
+  ![tidyverse version](https://img.shields.io/badge/tidyverse-1.3.1-brightgreen)
+  ![dplyr version](https://img.shields.io/badge/dplyr-1.0.7-brightgreen)
+  ![ggplot2 version](https://img.shields.io/badge/ggplot2-3.3.5-brightgreen)
+  ![tidytext version](https://img.shields.io/badge/tidytext-0.3.2-brightgreen)
+  ![textdata version](https://img.shields.io/badge/textdata-0.4.1-brightgreen)
+  ![rvest version](https://img.shields.io/badge/rvest-1.0.2-brightgreen)
+  ![httr version](https://img.shields.io/badge/httr-1.4.2-brightgreen)
+  ![curl version](https://img.shields.io/badge/curl-4.3.2-brightgreen)
+  ![jsonlite version](https://img.shields.io/badge/jsonlite-1.7.3-brightgreen)
+  ![caret version](https://img.shields.io/badge/caret-6.0--91-brightgreen)
+  ![gridExtra version](https://img.shields.io/badge/gridExtra-2.3-brightgreen)
+  ![scales version](https://img.shields.io/badge/scales-1.1.1-brightgreen)
+  ![choroplethr version](https://img.shields.io/badge/choroplethr-3.7.0-brightgreen)
+  ![choroplethrMaps version](https://img.shields.io/badge/choroplethrMaps-1.0.1-brightgreen)
+  ![topicmodels version](https://img.shields.io/badge/topicmodels-0.2--12-brightgreen)
+  ![textmineR version](https://img.shields.io/badge/textmineR-3.0.5-brightgreen)
+  ![wordcloud2 version](https://img.shields.io/badge/wordcloud2-0.2.2-brightgreen)
+  ![gbm version](https://img.shields.io/badge/gbm-2.1.8-brightgreen)
+  ![randomForest version](https://img.shields.io/badge/randomForest-4.7--1-brightgreen)
+  ![neuralnet version](https://img.shields.io/badge/neuralnet-1.44.2-brightgreen)
 
+### Purpose
+The project is based on Natural Language Processing with Disaster Tweets competition on Kaggle. We are trying to build a classifier to distinguish whether a public tweet is aboud disaster or not.
 
-## Data Source
-
-[Natural Language Processing with Disaster Tweets](https://www.kaggle.com/competitions/nlp-getting-started)
-
-## Competition Description
+#### Competition Description
 Twitter has become an important communication channel in times of emergency.
 The ubiquitousness of smartphones enables people to announce an emergency they’re observing in real-time. Because of this, more agencies are interested in programatically monitoring Twitter (i.e. disaster relief organizations and news agencies).
 
 But, it’s not always clear whether a person’s words are actually announcing a disaster. Take this example:
 
-<img width = '300' height = '550' src = "https://storage.googleapis.com/kaggle-media/competitions/tweet_screenshot.png"/>
+<img width = '200' height = '400' src = "https://storage.googleapis.com/kaggle-media/competitions/tweet_screenshot.png"/>
 
 The author explicitly uses the word “ABLAZE” but means it metaphorically. This is clear to a human right away, especially with the visual aid. But it’s less clear to a machine.
 
 In this competition, you’re challenged to build a machine learning model that predicts which Tweets are about real disasters and which one’s aren’t. You’ll have access to a dataset of 10,000 tweets that were hand classified. If this is your first time working on an NLP problem, we've created a quick tutorial to get you up and running.
 
 Disclaimer: The dataset for this competition contains text that may be considered profane, vulgar, or offensive.
+
+## Project Structure
+* `Project.Rmd` - The R markdown file for the project
+
+* `Config` - Directory which stores all the configuration files
+  * `kaggle.json` - A json file storing your Kaggle username and api key. (Replace this file with your own data)
+  * `twitter.json` - A json file storing your Twitter API key, value, and bearer token. (Replace this file with your own data)
+* `Data` - Directory which stores all data used in this project (will be auto-generated by R if not existed)
+  * `Kaggle` - Directory which stores the dataset downloaded from Kaggle (wiil be auto-generated by R if not existed and the dataset will be downloaded to this file automatically)
+  * `Twitter API Data` - Directory which stores the dataset we downloaded using Twitter API
+* `Lexicon` - Directory which stores the lexicons we use for sentimental analysis
+  * `NRC-Hashtag-Emotion-Lexicon-v0.2` - Directory for NRC Hashtag lexicon
+
+## Project Overview
+
 
 ## Contact
 
