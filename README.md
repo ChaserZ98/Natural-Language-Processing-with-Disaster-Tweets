@@ -111,6 +111,29 @@ Disclaimer: The dataset for this competition contains text that may be considere
 
 ## Project Overview
 
+### Dataset overview
+
+#### Columns
+  * `id` - unique identifier for each tweet
+  * `keyword` - keyword of the text content
+  * `location` - location of the tweet
+  * `text` - text content of each tweet
+  * `target` - binary value (0 for non-disaster tweet and 1 for disaster tweet)
+
+#### Missing Value
+  <img width = '450' height = '350' alt="missing value plot" title="missing value plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/missing%20value%20plot.png?raw=true"/>
+
+#### Target distribution
+  <img width = '450' height = '300' alt="target distribution plot" title="target distribution plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/target%20distribution%20plot.png?raw=true"/>
+
+#### Word Cloud for `text`
+  * Word cloud for all tweets
+    
+    <img width = '450' height = '300' alt="word cloud all" title="word cloud all" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/wordcloud%20all.png?raw=true"/>
+
+  * Word cloud for disaster tweets
+
+    <img width = '450' height = '300' alt="word cloud all" title="word cloud all" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/wordcloud%20disaster.png?raw=true"/>
 
 ## Contact
 
