@@ -43,10 +43,31 @@
             <li><a href="#missing-value">Missing Value</a></li>
             <li><a href="#target-distribution">Target Distribution</a></li>
             <li><a href="#word-cloud-for-text">Word Cloud for text</a></li>
+            <li><a href="#use-disaster-distribution">USA Disaster Distribution</a></li>
           </ul>
         </li>
+        <li><a href="#data-cleaning">Data Cleaning</a></li>
+        <li><a href="#latent-dirichlet-allocation-lda">Latent Dirichlet Allocation (LDA)</a></li>
+        <li>
+          <a href="#Feature Engineering">Feature Engineering</a>
+          <ul>
+            <li><a href="#numeric">Numeric</a></li>
+            <li><a href="#ratio-analysis">Ratio Analysis</a></li>
+            <li><a href="#sentiment-analysis">Sentiment Analysis</a></li>
+          </ul>
+        </li>
+        <li>
+          <a href="#classifier-model-training">Classifier Model Training</a>
+          <ul>
+            <li><a href="#train-validation-split">Train-validation Split</a></li>
+            <li><a href="#random-forest">Random Forest</a></li>
+            <li><a href="#neural-network">Neural Network</a></li>
+          </ul>
+        </li>
+        <li><a href="#performance-on-test-set-using-random-forest-bagging">Performance on Test Set Using Random Forest (Bagging)</a></li>
       </ul>
     </li>
+    <li><a href="#reference">Reference</a></li>
     <li><a href="#contact">Contact</a></li>
   </ol>
 </details>
@@ -103,6 +124,8 @@ In this competition, you’re challenged to build a machine learning model that 
 
 Disclaimer: The dataset for this competition contains text that may be considered profane, vulgar, or offensive.
 
+<p align="right">(<a href="#top">back to top</a>)</p>
+
 ## Project Structure
 * `Bin` - Directory which stores all codes
   * `Project.Rmd` - The R markdown file for the project
@@ -121,6 +144,8 @@ Disclaimer: The dataset for this competition contains text that may be considere
 * `Output` - Directory which stores all the output files
   * `Images` - Output Directory for images
   * `Rmd Knit` - Output Directory for Rmarkdown Knit
+
+<p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Project Overview
 
@@ -160,7 +185,7 @@ Disclaimer: The dataset for this competition contains text that may be considere
 
 ### Latent Dirichlet Allocation (LDA)
   * Tokenization
-  * Create Document Term Matrix(DTM)
+  * Create Document Term Matrix (DTM)
   * Model Tuning
 
     <img width = '450' height = '300' alt="coherence plot" title="coherence plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/coherence%20plot.png?raw=true"/>
@@ -170,6 +195,110 @@ Disclaimer: The dataset for this competition contains text that may be considere
 
 ### Feature Engineering
 
+#### Numeric
+  * `link_count` - number of links in a tweet
+  * `line_count` - number of lines in a tweet
+  * `tag_count` - number of tags in a tweet
+  * `at_count` - number of '@'s in a tweet
+  * `char_length` - number of characters in a tweet
+  * `word_count` - number of words in a tweet
+  * `mean_word_length` - derived by $\frac{\text{char\_length}}{\text{word\_count}}$, the average number of characters used for a word in a tweet
+  * `unique_word_count` - the number of distinct words used in a tweet
+  * `punc_count` - the number of punctuation marks in a tweet
+  * `stop_word_count` - the number of stop words in a tweet
+    <img width = '450' height = '300' alt="distribution plot" title="distribution plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/distribution%20plot.png?raw=true"/>
+
+#### Ratio Analysis
+  * Extract common disaster and non-disaster keyword, tags, '@'s and n-grams
+  * N-gram analysis
+    * Unigram
+      <img width = '450' height = '300' alt="top 20 unigram plot" title="top 20 unigram plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/top20Unigram%20plot.png?raw=true"/>
+    * Bigram
+      <img width = '450' height = '300' alt="top 20 bigram plot" title="top 20 bigram plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/top20Bigram%20plot.png?raw=true"/>
+    * Trigram
+      <img width = '450' height = '300' alt="top 20 trigram plot" title="top 20 trigram plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/top20Trigram%20plot.png?raw=true"/>
+
+#### Sentiment Analysis
+  * Lexicon: [NRC-Hashtag-Emotion-Lexicon-v0.2](https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm) [1-2]
+    * score: real-valued score between 0 to $\infty$
+    * size: 16862 unigrams
+    * emotions
+      * positive: anticipation, joy, surprise, trust
+      * negative: anger, disgust, fear, sadness 
+
+### Classifier Model Training
+
+#### Train-validation Split
+  * 80% train - 43% disaster tweet, 57% non-disaster tweet
+  * 20% validatoin - 43% disaster tweet, 57% non-disaster tweet
+
+#### Random Forest
+  * Bagging
+    * package: randomForest
+    * ntree: 2000
+    * accuracy on validation set: 77.78%
+    * confusion matrix on validation set:
+
+      $\begin{matrix}
+         & \text{Reference} & \\
+        \text{Prediction} & 0 & 1\\
+        0 & 752 & 223\\
+        1 & 115 & 431
+      \end{matrix}$
+
+  * Boosting
+    * package: gbm
+    * ntree: 5000
+    * ineraction depth: 3
+    * shrinkage: 0.2
+    * accuracy on validation set: 76%
+    * confusion matrix on validation set:
+      
+      $\begin{matrix}
+         & \text{Reference} & \\
+        \text{Prediction} & 0 & 1\\
+        0 & 735 & 233\\
+        1 & 132 & 421
+      \end{matrix}$
+
+#### Neural Network
+  * package: neuralnet
+  * number of hidden node: 5
+  * min threshold: 0.06
+  * activation function: logistic
+  * error function: ce
+  * stepmax: 1000000
+  * accuracy on validation set: 75.61%
+  * confusion matrix on validation set:
+  
+    $\begin{matrix}
+      & \text{Reference} & \\
+      \text{Prediction} & 0 & 1\\
+      0 & 716 & 151\\
+      1 & 220 & 434
+    \end{matrix}$
+  * visualization:
+    
+    <img width = '450' height = '300' alt="top 20 unigram plot" title="top 20 unigram plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/neural%20network%20plot.png?raw=true"/>
+
+### Performance on Test Set Using Random Forest (Bagging)
+  * accuracy: 75.45%
+  * confusion matrix on validation set:
+
+    $\begin{matrix}
+      & \text{Reference} & \\
+      \text{Prediction} & 0 & 1\\
+      0 & 1566 & 504\\
+      1 & 297 & 896
+    \end{matrix}$
+
+<p align="right">(<a href="#top">back to top</a>)</p>
+
+## Reference
+[1] [*Using Hashtags to Capture Fine Emotion Categories from Tweets*](http://onlinelibrary.wiley.com/doi/10.1111/coin.12024/abstract). Saif M. Mohammad, Svetlana Kiritchenko, Computational Intelligence, Volume 31, Issue 2, Pages 301-326, May 2015.
+
+[2] [*#Emotional Tweets*](http://ixa2.si.ehu.es/starsem/proc/pdf/STARSEM-SEMEVAL033.pdf), Saif Mohammad, In Proceedings of the First Joint Conference on Lexical and Computational Semantics (*Sem), June 2012, Montreal, Canada.
+<p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Contact
 
