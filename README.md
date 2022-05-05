@@ -43,7 +43,7 @@
             <li><a href="#missing-value">Missing Value</a></li>
             <li><a href="#target-distribution">Target Distribution</a></li>
             <li><a href="#word-cloud-for-text">Word Cloud for text</a></li>
-            <li><a href="#use-disaster-distribution">USA Disaster Distribution</a></li>
+            <li><a href="#usa-disaster-distribution">USA Disaster Distribution</a></li>
           </ul>
         </li>
         <li><a href="#data-cleaning">Data Cleaning</a></li>
@@ -144,6 +144,7 @@ Disclaimer: The dataset for this competition contains text that may be considere
 * `Output` - Directory which stores all the output files
   * `Images` - Output Directory for images
   * `Rmd Knit` - Output Directory for Rmarkdown Knit
+  * `Presentation Slides` - Directory for presentation slides
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
