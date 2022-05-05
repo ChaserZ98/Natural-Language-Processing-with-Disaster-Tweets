@@ -42,7 +42,6 @@ vignettes/*.pdf
 *.DS_Store
 
 # Project Ignored Files
-Data/Kaggle
-kaggle.json
-twitter.json
+Config/kaggle.json
+Config/twitter.json
 *.zip
