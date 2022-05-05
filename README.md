@@ -228,7 +228,8 @@ Disclaimer: The dataset for this competition contains text that may be considere
     * size: 16862 unigrams
     * emotions
       * positive: anticipation, joy, surprise, trust
-      * negative: anger, disgust, fear, sadness 
+      * negative: anger, disgust, fear, sadness
+  * `Sentimental Score` - sum of 4 positive sentiments scores minus sum of 4 negative sentiments scores
 
 ### Classifier Model Training
 
