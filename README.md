@@ -22,7 +22,7 @@
   </p>
 </div>
 
-<details>
+<details open>
   <summary>Table of Contents</summary>
   <ol>
     <li>
