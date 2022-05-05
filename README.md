@@ -277,7 +277,7 @@ Disclaimer: The dataset for this competition contains text that may be considere
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Reference
-[1] [*Using Hashtags to Capture Fine Emotion Categories from Tweets*](http://onlinelibrary.wiley.com/doi/10.1111/coin.12024/abstract). Saif M. Mohammad, Svetlana Kiritchenko, Computational Intelligence, Volume 31, Issue 2, Pages 301-326, May 2015.
+[1] [*Using Hashtags to Capture Fine Emotion Categories from Tweets*](http://saifmohammad.com/WebDocs/hashtags-MK.pdf). Saif M. Mohammad, Svetlana Kiritchenko, Computational Intelligence, Volume 31, Issue 2, Pages 301-326, May 2015.
 
 [2] [*#Emotional Tweets*](http://ixa2.si.ehu.es/starsem/proc/pdf/STARSEM-SEMEVAL033.pdf), Saif Mohammad, In Proceedings of the First Joint Conference on Lexical and Computational Semantics (*Sem), June 2012, Montreal, Canada.
 <p align="right">(<a href="#top">back to top</a>)</p>
