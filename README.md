@@ -33,7 +33,20 @@
       </ul>
     </li>
     <li><a href="#project-structure">Project Structure</a></li>
-    <li><a href="#project-overview">Project Overview</a></li>
+    <li>
+      <a href="#project-overview">Project Overview</a>
+      <ul>
+        <li>
+          <a href="#dataset-overview">Dataset Overview</a>
+          <ul>
+            <li><a href="#columns">Columns</a></li>
+            <li><a href="#missing-value">Missing Value</a></li>
+            <li><a href="#target-distribution">Target Distribution</a></li>
+            <li><a href="#word-cloud-for-text">Word Cloud for text</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
     <li><a href="#contact">Contact</a></li>
   </ol>
 </details>
