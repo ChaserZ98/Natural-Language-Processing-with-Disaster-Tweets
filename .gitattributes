@@ -1,6 +1,6 @@
-Config/* linguist-vendored
-Data/* linguist-vendored
-Lexicon/* linguist-vendored
-Output/* linguist-vendored
+Config/** linguist-vendored
+Data/** linguist-vendored
+Lexicon/** linguist-vendored
+Output/** linguist-vendored
 
 *.Rmd linguist-language=R
