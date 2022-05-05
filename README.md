@@ -202,7 +202,7 @@ Disclaimer: The dataset for this competition contains text that may be considere
   * `at_count` - number of '@'s in a tweet
   * `char_length` - number of characters in a tweet
   * `word_count` - number of words in a tweet
-  * `mean_word_length` - derived by <img src="https://latex.codecogs.com/svg.latex?\frac{\text{char\_length}}{\text{word\_count}}" title="\frac{\text{char\_length}}{\text{word\_count}}" />, the average number of characters used for a word in a tweet
+  * `mean_word_length` - derived by <img src="https://latex.codecogs.com/svg.latex?\frac{\text{char\_length}}{\text{word\_count}}" title="\frac{\text{char\_length}}{\text{word\_count}}" style="background: white"/>, the average number of characters used for a word in a tweet
 
   * `unique_word_count` - the number of distinct words used in a tweet
   * `punc_count` - the number of punctuation marks in a tweet
@@ -224,7 +224,7 @@ Disclaimer: The dataset for this competition contains text that may be considere
 
 #### Sentiment Analysis
   * Lexicon: [NRC-Hashtag-Emotion-Lexicon-v0.2](https://saifmohammad.com/WebPages/NRC-Emotion-Lexicon.htm) <sup>[<a href="#reference-1">1</a>, <a href="#reference-2">2</a>]</sup>
-    * score: real-valued score between 0 to <img src="https://latex.codecogs.com/svg.latex?\infty" title="\infty" />
+    * score: real-valued score between 0 to <img src="https://latex.codecogs.com/svg.latex?\infty" title="\infty" style="background: white"/>
     * size: 16862 unigrams
     * emotions
       * positive: anticipation, joy, surprise, trust
@@ -244,7 +244,7 @@ Disclaimer: The dataset for this competition contains text that may be considere
     * accuracy on validation set: 77.78%
     * confusion matrix on validation set:
 
-      <img src="https://latex.codecogs.com/svg.latex?\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&752&223\\1&115&431\end{matrix}" title="\infty" />
+      <img src="https://latex.codecogs.com/svg.latex?\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&752&223\\1&115&431\end{matrix}" title="\infty" style="background: white"/>
 
   * Boosting
     * package: gbm
@@ -254,7 +254,7 @@ Disclaimer: The dataset for this competition contains text that may be considere
     * accuracy on validation set: 76%
     * confusion matrix on validation set:
       
-      <img src="https://latex.codecogs.com/svg.latex?\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&735&233\\1&132&421\end{matrix}" title="\infty" />
+      <img src="https://latex.codecogs.com/svg.latex?\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&735&233\\1&132&421\end{matrix}" title="\infty" style="background: white"/>
 
 #### Neural Network
   * package: neuralnet
@@ -266,7 +266,7 @@ Disclaimer: The dataset for this competition contains text that may be considere
   * accuracy on validation set: 75.61%
   * confusion matrix on validation set:
   
-    <img src="https://latex.codecogs.com/svg.latex?\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&716&151\\1&220&434\end{matrix}" title="\infty" />
+    <img src="https://latex.codecogs.com/svg.latex?\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&716&151\\1&220&434\end{matrix}" title="\infty" style="background: white"/>
 
   * visualization:
     
@@ -276,7 +276,7 @@ Disclaimer: The dataset for this competition contains text that may be considere
   * accuracy: 75.45%
   * confusion matrix on validation set:
 
-    <img src="https://latex.codecogs.com/svg.latex?\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&1566&504\\1&297&896\end{matrix}" title="\infty" />
+    <img src="https://latex.codecogs.com/svg.latex?\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&1566&504\\1&297&896\end{matrix}" title="\infty" style="background: white"/>
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
