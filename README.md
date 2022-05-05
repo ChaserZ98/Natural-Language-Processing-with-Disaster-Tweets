@@ -213,10 +213,13 @@ Disclaimer: The dataset for this competition contains text that may be considere
   * Extract common disaster and non-disaster keyword, tags, '@'s and n-grams
   * N-gram analysis
     * Unigram
+
       <img width = '450' height = '300' alt="top 20 unigram plot" title="top 20 unigram plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/top20Unigram%20plot.png?raw=true"/>
     * Bigram
+      
       <img width = '450' height = '300' alt="top 20 bigram plot" title="top 20 bigram plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/top20Bigram%20plot.png?raw=true"/>
     * Trigram
+      
       <img width = '450' height = '300' alt="top 20 trigram plot" title="top 20 trigram plot" src = "https://github.com/ChaserZ98/Natural-Language-Processing-with-Disaster-Tweets/blob/main/Output/Images/top20Trigram%20plot.png?raw=true"/>
 
 #### Sentiment Analysis
