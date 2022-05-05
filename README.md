@@ -49,7 +49,7 @@
         <li><a href="#data-cleaning">Data Cleaning</a></li>
         <li><a href="#latent-dirichlet-allocation-lda">Latent Dirichlet Allocation (LDA)</a></li>
         <li>
-          <a href="#Feature Engineering">Feature Engineering</a>
+          <a href="#feature-engineering">Feature Engineering</a>
           <ul>
             <li><a href="#numeric">Numeric</a></li>
             <li><a href="#ratio-analysis">Ratio Analysis</a></li>
