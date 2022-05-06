@@ -65,6 +65,9 @@
           </ul>
         </li>
         <li><a href="#performance-on-test-set-using-random-forest-bagging">Performance on Test Set Using Random Forest (Bagging)</a></li>
+        <li><a href="#performance-on-twitter-api-data-using-random-forest-bagging">Performance on Twitter API Data Using Random Forest (Bagging)</a></li>
+        <li><a href="#performance-on-twitter-api-data-using-random-forest-boosting">Performance on Twitter API Data Using Random Forest (Boosting)</a></li>
+        <li><a href="#performance-on-twitter-api-data-using-neural-network">Performance on Twitter API Data Using Neural Network</a></li>
       </ul>
     </li>
     <li><a href="#reference">Reference</a></li>
