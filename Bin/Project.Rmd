@@ -3,10 +3,10 @@ title: "Final Project"
 author: "Feiyu Zheng (fz114) & Junyi Li(jl2707) & Ziyu Zhou (zz544)"
 date: "2022/3/27"
 output:
-  pdf_document: default
   html_document:
     toc: true
     toc_float: true
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -33,7 +33,7 @@ options(dplyr.summarise.inform = F)
 
 ## Download source data from kaggle
 
-```{r warning=FALSE}
+```{r download source data, warning=FALSE}
 kaggle <- fromJSON("../Config/kaggle.json")
 
 if(!dir.exists("../Data")){
@@ -70,7 +70,7 @@ if(!file.exists("../Data/Kaggle/train.csv")){
 
 ## Read downloaded csv files and convert them to tibble
 
-```{r}
+```{r read downloaded csv}
 encoding <- "UTF-8"
 trainset <- read.csv(
   "../Data/Kaggle/train.csv",
@@ -123,7 +123,7 @@ testset
 
 ### Missing Values
 
-```{r}
+```{r missing values}
 computeMissingValue <- function(dataset){
   rbind(
     dataset %>%
@@ -169,7 +169,7 @@ ggsave(file = "../Output/Images/missing value plot.png", missingValue_plot, bg =
 
 ### Target Distribution
 
-```{r}
+```{r target distribution}
 trainsetRatio <- trainset %>%
   mutate(total = n()) %>%
   group_by(target, total) %>%
@@ -219,7 +219,7 @@ ggsave(file = "../Output/Images/target distribution plot.png", targetDistributio
 
 #### Mislabeled data in train set
 
-```{r}
+```{r mislabeled train}
 trainset %>%
   group_by(text, target) %>%
   count() %>%
@@ -231,7 +231,7 @@ trainset %>%
 
 #### Mislabeled data in test set
 
-```{r}
+```{r mislabeled test}
 testset %>%
   group_by(text, target) %>%
   count() %>%
@@ -243,7 +243,7 @@ testset %>%
 
 #### Clean mislabeled data
 
-```{r}
+```{r clean mislabeled data}
 trainset <- trainset %>%
   mutate(target = case_when(
     str_detect(text, "#Allah describes piling") ~ as.integer(0),
@@ -276,7 +276,7 @@ testset <- testset %>%
 
 ### Extract links from text
 
-```{r}
+```{r extract links}
 extract_links <- function(dataset){
   dataset %>%
     mutate(
@@ -307,7 +307,7 @@ tidy_train
 
 ### Convert special url character (*%20* as white space) to readable string in each variable and replace newline character \n in text
 
-```{r}
+```{r convert special characters}
 replace_url_special_character <- function(dataset){
   dataset %>%
     mutate(
@@ -335,7 +335,7 @@ tidy_test <- tidy_test %>%
 
 ### Extract Tags and '\@'s in *text* variable
 
-```{r}
+```{r extract tags}
 extract_at <- function(dataset){
   dataset %>%
     mutate(
@@ -390,7 +390,7 @@ tidy_test <- tidy_test %>%
 
 ### Parse *location* variable -- Situations in American
 
-```{r warning=FALSE}
+```{r parse location, warning=FALSE}
 withLocation <- tidy_train %>%
   mutate(location = str_replace_all(location, regex("[^, [:alpha:]]+"), "")) %>%
   mutate(location = str_replace_all(location, regex("( )*,( )*"), ", ")) %>%
@@ -441,7 +441,7 @@ ggsave("../Output/Images/disaster map.png", disasterMap, bg = "white")
 
 ### Tokenization and Data cleaning
 
-```{r}
+```{r tokenization}
 tidy_trainset2 <- tidy_train
 tidy_trainset2$text <- sub("RT.*:", "", tidy_trainset2$text)
 text_cleaning_tokens <- tidy_trainset2 %>%
@@ -469,12 +469,12 @@ tokens$text <- trimws(tokens$text)
 
 ### Model Tuning: Choosing the Best Model
 
-```{r}
+```{r topic model library}
 library(topicmodels)
 library(textmineR)
 ```
 
-```{r warning=FALSE}
+```{r model tuning code, warning=FALSE}
 dtm <- CreateDtm(
   tokens$text,
   doc_names = tokens$ID,
@@ -534,9 +534,7 @@ ggsave(file = "../Output/Images/coherence plot.png", coherence_plot, bg = "white
 
 ### Topics
 
-ggsave(file = "../Output/Images/topic plot.png", topic_plot, bg = "white", dpi = 500)
-
-```{r}
+```{r LDA code}
 tweets_lda <- LDA(dtm, k = 20, method="Gibbs") # This might take a while
 tweets_topics <- tidy(tweets_lda, matrix = "beta")
 
@@ -557,16 +555,16 @@ ggsave(file = "../Output/Images/topic plot.png", topic_plot, bg = "white", width
 
 ## Word Cloud
 
-```{r}
+```{r word cloud library}
 library(wordcloud2)
 library(htmlwidgets)
 library(webshot)
-webshot::install_phantomjs()
+# webshot::install_phantomjs()
 ```
 
 ### All words
 
-```{r}
+```{r all words}
 set.seed(1234)
 wordcloud_all <- text_cleaning_tokens %>%
   filter(word != '') %>%
@@ -582,7 +580,7 @@ webshot("../Output/Images/wordcloud all.html", "../Output/Images/wordcloud all.p
 
 ### Disaster word cloud
 
-```{r}
+```{r disaster word cloud}
 wordcloud_disaster <- text_cleaning_tokens %>%
   filter(word != '') %>%
   anti_join(stop_words, copy = T) %>%
@@ -602,7 +600,7 @@ webshot("../Output/Images/wordcloud disaster.html", "../Output/Images/wordcloud 
 
 #### Ratio of each keyword vs target
 
-```{r}
+```{r ratio of keyword}
 keyword_ratio <- tidy_train %>%
   filter(!is.na(keyword)) %>%
   group_by(keyword, target) %>%
@@ -615,7 +613,7 @@ keyword_ratio
 
 #### Create disaster keyword and non-disaster keyword
 
-```{r}
+```{r disaster keyword}
 count_threshold <- 20
 ratio_threshold <- 0.8
 disaster_keywords <- keyword_ratio %>%
@@ -630,7 +628,7 @@ non_disaster_keywords %>%
   as_tibble()
 ```
 
-```{r}
+```{r extract disaster keyword count}
 checkDisasterKeyword <- function(dataset, disaster_keywords){
   dataset %>%
     mutate(
@@ -671,7 +669,7 @@ tidy_train
 
 #### Ratio of each tags vs target
 
-```{r}
+```{r ratio of tag}
 tag_ratio <- tidy_train %>%
   filter(!is.na(tags)) %>%
   separate_rows(tags, sep = ',') %>%
@@ -685,7 +683,7 @@ tag_ratio
 
 #### Create disaster tag and non-disaster tag
 
-```{r}
+```{r disaster tag}
 count_threshold <- 5
 ratio_threshold <- 0.7
 disaster_tag <- tag_ratio %>%
@@ -700,7 +698,7 @@ non_disaster_tag %>%
   as_tibble()
 ```
 
-```{r}
+```{r count disaster tag}
 countDisasterTag <- function(dataset, disaaster_tag){
    dataset %>%
     mutate(
@@ -764,7 +762,7 @@ tidy_train
 
 #### Ratio of each at vs target
 
-```{r}
+```{r at ratio}
 at_ratio <- tidy_train %>%
   filter(!is.na(at)) %>%
   separate_rows(at, sep = ',') %>%
@@ -777,7 +775,7 @@ at_ratio
 
 #### Create disaster at and non-disaster at
 
-```{r}
+```{r disaster at}
 count_threshold <- 5
 ratio_threshold <- 0.7
 disaster_at <- at_ratio %>%
@@ -851,7 +849,7 @@ tidy_train
 
 #### Extract *char length*, *word count*, *mean word count*, *unique word count*, *punctuation count*, *stop words count*
 
-```{r}
+```{r extract text numeric}
 extract_char_length <- function(dataset){
   dataset %>%
     mutate(char_length = nchar(.$text))
@@ -894,32 +892,6 @@ extract_stop_word_count <- function(dataset){
   )
 }
 
-# classify_char_length <- function(dataset){
-#   dataset %>%
-#     mutate(
-#       char_length_type = case_when(
-#         char_length <= 50 ~ "short",
-#         char_length <= 100 ~ "medium",
-#         char_length <= 150 ~ "long",
-#         T ~ "other"
-#       )
-#     )
-# }
-# classify_word_length <- function(dataset){
-#   dataset %>%
-#     mutate(
-#       word_count_type = case_when(
-#         word_count <= 5 ~ "0-5",
-#         word_count <= 10 ~ "5-10",
-#         word_count <= 15 ~ "10-15",
-#         word_count <= 20 ~ "15-20",
-#         word_count <= 25 ~ "20-25",
-#         word_count <= 30 ~ "25-30",
-#         T ~ "other"
-#       )
-#     )
-# }
-
 tidy_train <- tidy_train %>%
   extract_char_length() %>%
   extract_word_count() %>%
@@ -936,20 +908,12 @@ tidy_test <- tidy_test %>%
   extract_punctuation_count() %>%
   extract_stop_word_count()
 
-# tidy_train <- tidy_train %>%
-#   classify_char_length() %>%
-#   classify_word_length()
-# 
-# tidy_test <- tidy_test %>%
-#   classify_char_length() %>%
-#   classify_word_length()
-
 tidy_train
 ```
 
 #### Distribution of each feature
 
-```{r}
+```{r numeric distribution}
 char_length_distribution <- tidy_train %>%
   mutate(target = as.factor(target)) %>%
   ggplot() +
@@ -1037,7 +1001,7 @@ ggsave(file = "../Output/Images/distribution plot.png", distribution_plot, bg = 
 
 ##### Unigram
 
-```{r}
+```{r unigram}
 unigrams <- tidy_train %>%
   unnest_tokens(unigram, text, token = "ngrams", n = 1) %>%
   filter(unigram != "NA") %>%
@@ -1055,7 +1019,7 @@ unigrams
 
 ##### Disaster unigram and non-disaster unigram
 
-```{r}
+```{r disaster unigram}
 count_threshold <- 25
 ratio_threshold <- 0.65
 disaster_unigrams <- unigrams %>%
@@ -1096,7 +1060,7 @@ top20Unigrams_plot <- grid.arrange(top20DisasterUnigrams_plot, top20NonDisasterU
 ggsave(file = "../Output/Images/top20Unigram plot.png", top20Unigrams_plot, bg = "white")
 ```
 
-```{r}
+```{r count disaster unigram}
 countDisasterUnigram <- function(dataset, disaster_unigram){
   dataset %>%
     mutate(
@@ -1145,7 +1109,7 @@ tidy_train
 
 ##### Bigram
 
-```{r}
+```{r bigram}
 bigrams <- tidy_train %>%
   unnest_tokens(bigram, text, token = "ngrams", n = 2) %>%
   filter(bigram != "NA") %>%
@@ -1167,7 +1131,7 @@ bigrams
 
 ##### Disaster bigram and non-disaster bigram
 
-```{r}
+```{r disaster bigram}
 count_threshold <- 10
 ratio_threshold <- 0.65
 disaster_bigrams <- bigrams %>%
@@ -1208,7 +1172,7 @@ top20Bigram_plot <- grid.arrange(top20DisasterBigrams_plot, top20NonDisasterBigr
 ggsave(file = "../Output/Images/top20Bigram plot.png", top20Bigram_plot, bg = "white")
 ```
 
-```{r}
+```{r count disaster bigram}
 countDisasterBigram <- function(dataset, disaster_bigram){
   dataset %>%
     mutate(
@@ -1257,7 +1221,7 @@ tidy_train
 
 ##### Trigram
 
-```{r}
+```{r trigram}
 trigrams <- tidy_train %>%
   unnest_tokens(trigram, text, token = "ngrams", n = 3) %>%
   filter(trigram != "NA") %>%
@@ -1280,7 +1244,7 @@ trigrams
 
 ##### Disaster trigram and non-disaster trigram
 
-```{r}
+```{r disaster trigram}
 count_threshold <- 10
 ratio_threshold <- 0.65
 disaster_trigrams <- trigrams %>%
@@ -1321,7 +1285,7 @@ top20Trigram_plot <- grid.arrange(top20DisasterTrigrams_plot, top20NonDisasterTr
 ggsave(file = "../Output/Images/top20Trigram plot.png", top20Trigram_plot, bg = "white")
 ```
 
-```{r}
+```{r count disaster trigram}
 countDisasterTrigram <- function(dataset, disaster_trigram){
   dataset %>%
     mutate(
@@ -1372,7 +1336,7 @@ tidy_train
 
 #### Lexicon
 
-```{r}
+```{r lexicon}
 nrc_hashtag <- read_table(
   '../Lexicon/NRC-Hashtag-Emotion-Lexicon-v0.2.txt',
   col_names = c('type', 'word', 'score')
@@ -1388,7 +1352,7 @@ nrc_hashtag
 
 #### Get sentimental score of each tweet
 
-```{r}
+```{r get sentiments}
 getSentiments <- function(dataset, lexicon){
   dataset %>%
     unnest_tokens(word, text) %>%
@@ -1407,7 +1371,7 @@ tidy_train
 
 # Train-validation split based on target ratio
 
-```{r}
+```{r train-validation split}
 total <- nrow(trainset)
 zeroRatio <- trainsetRatio %>%
   filter(target == 0) %>%
@@ -1454,15 +1418,15 @@ tidy_valid
 
 ### Boosting
 
-```{r}
+```{r boosting library}
 library(gbm)
 ```
 
-```{r}
+```{r show train}
 tidy_train
 ```
 
-```{r}
+```{r process model input}
 processModelInput <- function(dataset){
   dataset %>%
   select(
@@ -1502,7 +1466,7 @@ input_test <- tidy_test %>%
   processModelInput()
 ```
 
-```{r}
+```{r boosting train}
 boosting <- gbm(
   as.character(target) ~.,
   data = input_train,,
@@ -1514,7 +1478,7 @@ boosting <- gbm(
 boosting
 ```
 
-```{r}
+```{r boosting valid result}
 predict.result <- predict(boosting, input_valid, n.trees = 320, type = 'response')
 predict.result[predict.result > 0.5] = 1
 predict.result[predict.result <= 0.5] = 0
@@ -1525,11 +1489,11 @@ predict.result %>%
 
 ### Bagging
 
-```{r}
+```{r bagging library}
 library(randomForest)
 ```
 
-```{r}
+```{r bagging train}
 bagging <- randomForest(
   as.factor(target) ~.,
   data = input_train,
@@ -1539,7 +1503,7 @@ bagging <- randomForest(
 bagging
 ```
 
-```{r}
+```{r bagging valid result}
 p1 <- predict(bagging, input_valid)
 p1 %>%
   as.factor() %>%
@@ -1548,13 +1512,24 @@ p1 %>%
 
 ## Neural Network Training
 
-```{r}
+```{r neural network library}
 library(neuralnet)
 ```
 
-```{r}
+```{r neural network train}
 set.seed(25)
-network <- neuralnet(
+
+model_directory <- "../Output/Model/"
+if(!dir.exists(model_directory)){
+  dir.create(model_directory)
+}
+model_file_name <- "neural network.rds"
+model_path <- paste(model_directory, model_file_name, sep = "")
+
+if(file.exists(model_path)){
+  network <- readRDS(model_path)
+}else{
+  network <- neuralnet(
     target ~
       link_count + 
       line_count +
@@ -1592,23 +1567,26 @@ network <- neuralnet(
     stepmax = 1000000,
     likelihood = T
   )
+  saveRDS(network, model_path)
+}
 network$result.matrix[1,]
 plot(network, rep = "best")
 ```
 
-```{r}
+```{r neural network valid result}
 network.results <- compute(network, input_valid, rep = which.min(network$result.matrix[1, ]))
 results <- data.frame(actual = input_valid$target, prediction = round(network.results$net.result))
-results
 t <- table(results$actual, results$prediction)
 t
 prop.table(t)
 sum(diag(t))/sum(t)
 ```
 
-# Twitter API
+# Twitter API Data
 
-```{r}
+## Combine Twitter Data
+
+```{r combine twitter data}
 # We downloaded a lot of data from the twitter api using postman
 data1 <- fromJSON('../Data/Twitter API Data/las.json')$data$text %>% as_tibble()
 data2 <- fromJSON('../Data/Twitter API Data/DisasterInfoPH.json')$data$text %>% as_tibble()
@@ -1628,5 +1606,74 @@ twitterData <- rbind(disasterData, nonDisasterData)
 twitterData <- twitterData %>%
   mutate(id = row_number()) %>%
   rename(c('text' = value))
-twitterData
+```
+
+## Process Twitter Data
+
+```{r process twitter data}
+tidy_twitterData <- twitterData %>%
+  extract_links() %>%
+  # replace_url_special_character() %>%
+  replace_new_line() %>%
+  extract_at() %>%
+  extract_tags() %>%
+  mutate(disaster_keyword_count = 0, non_disaster_keyword_count = 0) %>%
+  # checkDisasterKeyword(disaster_keywords) %>%
+  # checkNonDisasterKeyword(non_disaster_keywords) %>%
+  countDisasterTag(disaster_tag) %>%
+  countNonDisasterTag(non_disaster_tag) %>%
+  countDisasterAt(disaster_at) %>%
+  countNonDisasterAt(non_disaster_at) %>%
+  extract_char_length() %>%
+  extract_word_count() %>%
+  extract_mean_word_length() %>%
+  extract_unique_word_count() %>%
+  extract_punctuation_count() %>%
+  extract_stop_word_count() %>%
+  countDisasterUnigram(disaster_unigrams$unigram) %>%
+  countNonDisasterUnigram(non_disaster_unigrams$unigram) %>%
+  countDisasterBigram(disaster_bigrams$bigram) %>%
+  countNonDisasterBigram(non_disaster_bigrams$bigram) %>%
+  countDisasterTrigram(disaster_trigrams$trigram) %>%
+  countNonDisasterTrigram(non_disaster_trigrams$trigram) %>%
+  getSentiments(nrc_hashtag)
+```
+
+## Convert to Model Input Format
+
+```{r convert twitter data}
+input_twitterData <- tidy_twitterData %>%
+  processModelInput()
+input_twitterData
+```
+
+## Predict Using Random Forest Bagging
+
+```{r bagging on twitter data}
+p1 <- predict(bagging, input_twitterData)
+p1 %>%
+  as.factor() %>%
+  confusionMatrix(as.factor(input_twitterData$target))
+```
+
+## Predict Using Random Forest Boosting
+
+```{r boosting on twitter data}
+predict.result <- predict(boosting, input_twitterData, n.trees = 320, type = 'response')
+predict.result[predict.result > 0.5] = 1
+predict.result[predict.result <= 0.5] = 0
+predict.result %>%
+  as.factor() %>%
+  confusionMatrix(as.factor(input_twitterData$target))
+```
+
+## Predict Using Neural Network
+
+```{r neural network on twitter data}
+network.results <- compute(network, input_twitterData, rep = which.min(network$result.matrix[1, ]))
+results <- data.frame(actual = input_twitterData$target, prediction = round(network.results$net.result))
+t <- table(results$actual, results$prediction)
+t
+prop.table(t)
+sum(diag(t))/sum(t)
 ```
