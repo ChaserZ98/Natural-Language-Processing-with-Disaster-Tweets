@@ -3,10 +3,10 @@ title: "Final Project"
 author: "Feiyu Zheng (fz114) & Junyi Li(jl2707) & Ziyu Zhou (zz544)"
 date: "2022/3/27"
 output:
+  pdf_document: default
   html_document:
     toc: true
     toc_float: true
-  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}

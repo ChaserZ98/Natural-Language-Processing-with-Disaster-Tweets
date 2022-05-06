@@ -143,8 +143,10 @@ Disclaimer: The dataset for this competition contains text that may be considere
 
 * `Output` - Directory which stores all the output files
   * `Images` - Output Directory for images
-  * `Rmd Knit` - Output Directory for Rmarkdown Knit
+  * `LDA` - Output Directory for LDA model
+  * `Model` - Output Directory for trained models
   * `Presentation Slides` - Directory for presentation slides
+  * `Rmd Knit` - Output Directory for Rmarkdown Knit
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
