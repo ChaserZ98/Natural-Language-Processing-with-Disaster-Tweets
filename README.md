@@ -281,6 +281,24 @@ Disclaimer: The dataset for this competition contains text that may be considere
 
     <img src="https://latex.codecogs.com/png.latex?%5Cbg_white\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&1566&504\\1&297&896\end{matrix}" title="test confusion matrix" />
 
+### Performance on Twitter API Data Using Random Forest (Bagging)
+  * accuracy: 65.52%
+  * confusion matrix:
+
+    <img src="https://latex.codecogs.com/png.latex?%5Cbg_white\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&91&61\\1&9&42\end{matrix}" title="twitter bagging confusion matrix" />
+
+### Performance on Twitter API Data Using Random Forest (Boosting)
+  * accuracy: 60.1%
+  * confusion matrix:
+
+    <img src="https://latex.codecogs.com/png.latex?%5Cbg_white\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&84&65\\1&16&38\end{matrix}" title="twitter boosting confusion matrix" />
+
+### Performance on Twitter API Data Using Neural Network
+  * accuracy: 72.91%
+  * confusion matrix:
+
+    <img src="https://latex.codecogs.com/png.latex?%5Cbg_white\begin{matrix}&\text{Reference}&\\\text{Prediction}&0&1\\0&86&41\\1&14&62\end{matrix}" title="twitter bagging confusion matrix" />
+
 <p align="right">(<a href="#top">back to top</a>)</p>
 
 ## Reference

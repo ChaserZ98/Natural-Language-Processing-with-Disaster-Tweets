@@ -3,10 +3,10 @@ title: "Final Project"
 author: "Feiyu Zheng (fz114) & Junyi Li(jl2707) & Ziyu Zhou (zz544)"
 date: "2022/3/27"
 output:
-  pdf_document: default
   html_document:
     toc: true
     toc_float: true
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -1672,7 +1672,7 @@ predict.result %>%
 ```{r neural network on twitter data}
 network.results <- compute(network, input_twitterData, rep = which.min(network$result.matrix[1, ]))
 results <- data.frame(actual = input_twitterData$target, prediction = round(network.results$net.result))
-t <- table(results$actual, results$prediction)
+t <- table(results$prediction, results$actual)
 t
 prop.table(t)
 sum(diag(t))/sum(t)
